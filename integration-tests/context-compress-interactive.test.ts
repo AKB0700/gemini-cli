@@ -19,17 +19,20 @@ describe.skip('Interactive Mode', () => {
   });
 
   it('should trigger chat compression with /compress command', async () => {
-    await rig.setup('interactive-compress-test');
+    rig.setup('interactive-compress-success');
 
     const run = await rig.runInteractive();
 
+    // Generate a long context to make compression viable.
+    // We ask for a specific end marker to reliably detect when generation is done.
     const longPrompt =
-      'Dont do anything except returning a 1000 token long paragragh with the <name of the scientist who discovered theory of relativity> at the end to indicate end of response. This is a moderately long sentence.';
+      'Write a repetitive list of 500 items. Do not use markdown. At the very end of your response, write exactly: END_OF_LONG_RESPONSE';
 
     await run.type(longPrompt);
     await run.type('\r');
 
-    await run.expectText('einstein', 25000);
+    // Wait for the specific end marker.
+    await run.expectText('END_OF_LONG_RESPONSE', 30000);
 
     await run.type('/compress');
     // A small delay to allow React to re-render the command list.
@@ -45,16 +48,26 @@ describe.skip('Interactive Mode', () => {
     );
   });
 
-  //TODO - https://github.com/google-gemini/gemini-cli/issues/10769
-  it.skip('should handle compression failure on token inflation', async () => {
-    await rig.setup('interactive-compress-test');
+  it('should handle /compress command on empty history', async () => {
+    rig.setup('interactive-compress-empty');
 
     const run = await rig.runInteractive();
 
     await run.type('/compress');
-    // A small delay to allow React to re-render the command list.
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // A 3s delay has been added to account for windows slash command loading
+    // being slightly slower.
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     await run.type('\r');
-    await run.expectText('compression was not beneficial', 25000);
+    await run.expectText('Nothing to compress.', 25000);
+
+    // Verify no telemetry event is logged for NOOP
+    const foundEvent = await rig.waitForTelemetryEvent(
+      'chat_compression',
+      5000, // Short timeout as we expect it not to happen
+    );
+    expect(
+      foundEvent,
+      'chat_compression telemetry event should not be found for NOOP',
+    ).toBe(false);
   });
 });
