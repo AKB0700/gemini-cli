@@ -6,6 +6,8 @@
 
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { TestRig } from './test-helper.js';
+import { join } from 'node:path';
+import { ExitCodes } from '@google/gemini-cli-core/src/index.js';
 
 describe('JSON output', () => {
   let rig: TestRig;
@@ -39,7 +41,9 @@ describe('JSON output', () => {
     process.env['GOOGLE_GENAI_USE_GCA'] = 'true';
     await rig.setup('json-output-auth-mismatch', {
       settings: {
-        security: { auth: { enforcedType: 'gemini-api-key' } },
+        security: {
+          auth: { enforcedType: 'gemini-api-key', selectedType: '' },
+        },
       },
     });
 
@@ -78,14 +82,20 @@ describe('JSON output', () => {
 
     expect(payload.error).toBeDefined();
     expect(payload.error.type).toBe('Error');
-    expect(payload.error.code).toBe(1);
+    expect(payload.error.code).toBe(ExitCodes.FATAL_AUTHENTICATION_ERROR);
     expect(payload.error.message).toContain(
       "enforced authentication type is 'gemini-api-key'",
     );
     expect(payload.error.message).toContain("current type is 'oauth-personal'");
   });
 
-  it.skip('should not exit on tool errors and allow model to self-correct in JSON mode', async () => {
+  it('should not exit on tool errors and allow model to self-correct in JSON mode', async () => {
+    rig.setup('json-output-error', {
+      fakeResponsesPath: join(
+        import.meta.dirname,
+        'json-output.error.responses',
+      ),
+    });
     const result = await rig.run(
       `Read the contents of ${rig.testDir}/path/to/nonexistent/file.txt and tell me what it says. ` +
         'On error, respond to the user with exactly the text "File not found".',

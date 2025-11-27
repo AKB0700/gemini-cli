@@ -5,9 +5,11 @@
  */
 
 import { renderWithProviders } from '../../test-utils/render.js';
-import { waitFor } from '@testing-library/react';
+import { waitFor } from '../../test-utils/async.js';
+import { act } from 'react';
 import { vi } from 'vitest';
 import { FolderTrustDialog } from './FolderTrustDialog.js';
+import { ExitCodes } from '@google/gemini-cli-core';
 import * as processUtils from '../../utils/processUtils.js';
 
 vi.mock('../../utils/processUtils.js', () => ({
@@ -50,7 +52,9 @@ describe('FolderTrustDialog', () => {
       <FolderTrustDialog onSelect={onSelect} isRestarting={false} />,
     );
 
-    stdin.write('\x1b'); // escape key
+    act(() => {
+      stdin.write('\u001b[27u'); // Press kitty escape key
+    });
 
     await waitFor(() => {
       expect(lastFrame()).toContain(
@@ -58,7 +62,9 @@ describe('FolderTrustDialog', () => {
       );
     });
     await waitFor(() => {
-      expect(mockedExit).toHaveBeenCalledWith(1);
+      expect(mockedExit).toHaveBeenCalledWith(
+        ExitCodes.FATAL_CANCELLATION_ERROR,
+      );
     });
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -87,7 +93,9 @@ describe('FolderTrustDialog', () => {
       <FolderTrustDialog onSelect={vi.fn()} isRestarting={false} />,
     );
 
-    stdin.write('r');
+    act(() => {
+      stdin.write('r');
+    });
 
     await waitFor(() => {
       expect(mockedExit).not.toHaveBeenCalled();
