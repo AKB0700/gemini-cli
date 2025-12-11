@@ -8,7 +8,16 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { vi, describe, expect, it, afterEach, beforeEach } from 'vitest';
+import {
+  vi,
+  describe,
+  expect,
+  it,
+  afterEach,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import * as gitUtils from '../../utils/gitUtils.js';
 import {
   setupGithubCommand,
@@ -19,10 +28,14 @@ import {
 import type { CommandContext, ToolActionReturn } from './types.js';
 import * as commandUtils from '../utils/commandUtils.js';
 import { debugLogger } from '@google/gemini-cli-core';
+import {
+  installSetupGithubNock,
+  cleanupSetupGithubNock,
+} from '../../../test/nock-stubs/setupGithubNock.js';
 
 vi.mock('child_process');
 
-// Mock fetch globally
+// Mock fetch globally - nock doesn't intercept native fetch, so we need this
 global.fetch = vi.fn();
 
 vi.mock('../../utils/gitUtils.js', () => ({
@@ -35,6 +48,14 @@ vi.mock('../../utils/gitUtils.js', () => ({
 vi.mock('../utils/commandUtils.js', () => ({
   getUrlOpenCommand: vi.fn(),
 }));
+
+beforeAll(() => {
+  installSetupGithubNock();
+});
+
+afterAll(() => {
+  cleanupSetupGithubNock();
+});
 
 describe('setupGithubCommand', async () => {
   let scratchDir = '';
@@ -60,6 +81,7 @@ describe('setupGithubCommand', async () => {
     const workflows = GITHUB_WORKFLOW_PATHS.map((p) => path.basename(p));
     const commands = GITHUB_COMMANDS_PATHS.map((p) => path.basename(p));
 
+    // Mock fetch to return the filename as content (matching test expectations)
     vi.mocked(global.fetch).mockImplementation(async (url) => {
       const filename = path.basename(url.toString());
       return new Response(filename, {
@@ -134,6 +156,7 @@ describe('setupGithubCommand', async () => {
     const fakeRepoRoot = scratchDir;
     const fakeReleaseVersion = 'v1.2.3';
 
+    // Mock fetch to return 404
     vi.mocked(global.fetch).mockResolvedValue(
       new Response('Not Found', {
         status: 404,
