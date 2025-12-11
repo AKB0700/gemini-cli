@@ -20,22 +20,21 @@ export function installSetupGithubNock() {
   // nock.enableNetConnect('127.0.0.1');
 
   const scope = nock('https://raw.githubusercontent.com')
-    .persist() // Allow the same interceptor to be used multiple times
     .get(
-      /\/google-github-actions\/run-gemini-cli\/refs\/tags\/v1\.2\.3\/examples\/workflows\/.*/,
+      '/google-github-actions/run-gemini-cli/refs/tags/v1.2.3/examples/workflows/gemini-dispatch/gemini-dispatch.yml',
     )
-    .reply(function (uri) {
-      // Extract the filename from the URL to return it as content
-      // This matches the existing test behavior where the filename is returned as content
-      const filename = uri.split('/').pop() || 'unknown';
-      return [
-        200,
-        filename,
-        {
-          'Content-Type': 'text/plain',
-        },
-      ];
-    });
+    .reply(
+      200,
+      `name: mock workflow
+on: [push]
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps: []`,
+      {
+        'Content-Type': 'text/yaml; charset=utf-8',
+      },
+    );
 
   return scope;
 }
