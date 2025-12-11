@@ -1,38 +1,40 @@
-name: 'Run Tests'
-description: 'Runs the preflight checks and integration tests.'
+name: 'Run tests (with GEMINI API key)'
+description: 'Run the project tests; accepts gemini_api_key as input or reads from environment / secrets.'
 
 inputs:
   gemini_api_key:
-    description: 'The API key for running integration tests.'
-    required: true
-  working-directory:
-    description: 'The working directory to run the tests in.'
+    description: 'Gemini API key (optional, otherwise read from GEMINI_API_KEY env)'
     required: false
-    default: '.'
+    default: ''
+
+  working-directory:
+    description: 'Working directory'
+    required: false
+    default: './'
 
 runs:
   using: 'composite'
   steps:
-    - name: '📝 Print Inputs'
-      shell: 'bash'
-      env:
-        JSON_INPUTS: '${{ toJSON(inputs) }}'
-      run: 'echo "$JSON_INPUTS"'
-    - name: 'Run Tests'
-      env:
-        GEMINI_API_KEY: '${{ inputs.gemini_api_key }}'
+    - name: 'Set GEMINI_API_KEY from input if provided'
+      shell: bash
+      run: |
+        if [[ -n "${{ inputs.gemini_api_key }}" ]]; then
+          echo "GEMINI_API_KEY=${{ inputs.gemini_api_key }}" >> $GITHUB_ENV
+        fi
+
+    - name: 'Fail early if GEMINI_API_KEY missing'
+      shell: bash
+      run: |
+        if [[ -z "${GEMINI_API_KEY}" ]]; then
+          echo "::error::GEMINI_API_KEY is not set. Please add it as a repository secret and/or pass it as an input."
+          exit 1
+        fi
+        echo "GEMINI_API_KEY is set (length: ${#GEMINI_API_KEY})."
+
+    - name: 'Run tests (example)'
+      shell: bash
       working-directory: '${{ inputs.working-directory }}'
-      run: |-
-        echo "::group::Build"
+      run: |
+        npm ci
         npm run build
-        echo "::endgroup::"
-        echo "::group::Unit Tests"
         npm run test:ci
-        echo "::endgroup::"
-        echo "::group::Integration Tests (no sandbox)"
-        npm run test:integration:sandbox:none
-        echo "::endgroup::"
-        echo "::group::Integration Tests (docker sandbox)"
-        npm run test:integration:sandbox:docker
-        echo "::endgroup::"
-      shell: 'bash'

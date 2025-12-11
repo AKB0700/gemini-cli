@@ -137,16 +137,11 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: 'Build project'
-        run: 'npm run build'
-
-      - name: 'Install dependencies for testing'
-        run: 'npm ci'
-
-      - name: 'Run tests and generate reports'
-        env:
-          NO_COLOR: true
-        run: 'npm run test:ci'
+      - name: Run preflight & tests via composite action
+        uses: ./.github/actions/run-tests
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          working-directory: '.'
 
       - name: 'Bundle'
         run: 'npm run bundle'
@@ -205,16 +200,11 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: 'Build project'
-        run: 'npm run build'
-
-      - name: 'Install dependencies for testing'
-        run: 'npm ci'
-
-      - name: 'Run tests and generate reports'
-        env:
-          NO_COLOR: true
-        run: 'npm run test:ci -- --coverage.enabled=false'
+      - name: Run preflight & tests via composite action
+        uses: ./.github/actions/run-tests
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          working-directory: '.'
 
       - name: 'Bundle'
         run: 'npm run bundle'
@@ -305,6 +295,8 @@ jobs:
     needs: 'merge_queue_skipper'
     if: "${{needs.merge_queue_skipper.outputs.skip == 'false'}}"
     continue-on-error: true
+    env:
+      GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
 
     steps:
       - name: 'Checkout'
@@ -350,7 +342,6 @@ jobs:
 
       - name: 'Run tests and generate reports'
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           NO_COLOR: true
           NODE_OPTIONS: '--max-old-space-size=32768 --max-semi-space-size=256'
           UV_THREADPOOL_SIZE: '32'

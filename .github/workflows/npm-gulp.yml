@@ -22,7 +22,8 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Build
-      run: |
-        npm install
-        gulp
+    - name: Run preflight & tests via composite action
+      uses: ./.github/actions/run-tests
+      with:
+        gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+        working-directory: '.'
