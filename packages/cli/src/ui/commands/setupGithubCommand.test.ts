@@ -8,7 +8,16 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { vi, describe, expect, it, afterEach, beforeEach } from 'vitest';
+import {
+  vi,
+  describe,
+  expect,
+  it,
+  afterEach,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import * as gitUtils from '../../utils/gitUtils.js';
 import {
   setupGithubCommand,
@@ -19,11 +28,13 @@ import {
 import type { CommandContext, ToolActionReturn } from './types.js';
 import * as commandUtils from '../utils/commandUtils.js';
 import { debugLogger } from '@google/gemini-cli-core';
+import {
+  installGithubNock,
+  cleanupGithubNock,
+  resetGithubNock,
+} from '../../test-utils/setupGithubNock.js';
 
 vi.mock('child_process');
-
-// Mock fetch globally
-global.fetch = vi.fn();
 
 vi.mock('../../utils/gitUtils.js', () => ({
   isGitHubRepository: vi.fn(),
@@ -39,8 +50,21 @@ vi.mock('../utils/commandUtils.js', () => ({
 describe('setupGithubCommand', async () => {
   let scratchDir = '';
 
+  beforeAll(() => {
+    // Install nock stubs to intercept network calls
+    installGithubNock('v1.2.3');
+  });
+
+  afterAll(() => {
+    // Clean up nock and restore network connections
+    cleanupGithubNock();
+  });
+
   beforeEach(async () => {
     vi.resetAllMocks();
+    // Reset nock interceptors between tests
+    resetGithubNock();
+    installGithubNock('v1.2.3');
     scratchDir = await fs.mkdtemp(
       path.join(os.tmpdir(), 'setup-github-command-'),
     );
@@ -60,14 +84,7 @@ describe('setupGithubCommand', async () => {
     const workflows = GITHUB_WORKFLOW_PATHS.map((p) => path.basename(p));
     const commands = GITHUB_COMMANDS_PATHS.map((p) => path.basename(p));
 
-    vi.mocked(global.fetch).mockImplementation(async (url) => {
-      const filename = path.basename(url.toString());
-      return new Response(filename, {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'Content-Type': 'text/plain' },
-      });
-    });
+    // No need to mock fetch - nock handles the HTTP interception
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
     vi.mocked(gitUtils.getGitRepoRoot).mockReturnValueOnce(fakeRepoRoot);
@@ -134,12 +151,20 @@ describe('setupGithubCommand', async () => {
     const fakeRepoRoot = scratchDir;
     const fakeReleaseVersion = 'v1.2.3';
 
-    vi.mocked(global.fetch).mockResolvedValue(
-      new Response('Not Found', {
-        status: 404,
-        statusText: 'Not Found',
-      }),
-    );
+    // Reset nock and set up 404 responses for this test
+    resetGithubNock();
+    const nock = (await import('nock')).default;
+
+    // Mock all possible workflow and command file requests with 404
+    const allPaths = [...GITHUB_WORKFLOW_PATHS, ...GITHUB_COMMANDS_PATHS];
+
+    allPaths.forEach((filePath) => {
+      nock('https://raw.githubusercontent.com')
+        .get(
+          `/google-github-actions/run-gemini-cli/refs/tags/${fakeReleaseVersion}/examples/workflows/${filePath}`,
+        )
+        .reply(404, 'Not Found');
+    });
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
     vi.mocked(gitUtils.getGitRepoRoot).mockReturnValueOnce(fakeRepoRoot);
