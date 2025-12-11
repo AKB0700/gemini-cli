@@ -16,14 +16,14 @@ runs:
   using: 'composite'
   steps:
     - name: 'Set GEMINI_API_KEY from input if provided'
-      shell: bash
+      shell: 'bash'
       run: |
         if [[ -n "${{ inputs.gemini_api_key }}" ]]; then
           echo "GEMINI_API_KEY=${{ inputs.gemini_api_key }}" >> $GITHUB_ENV
         fi
 
     - name: 'Fail early if GEMINI_API_KEY missing'
-      shell: bash
+      shell: 'bash'
       run: |
         if [[ -z "${GEMINI_API_KEY}" ]]; then
           echo "::error::GEMINI_API_KEY is not set. Please add it as a repository secret and/or pass it as an input."
@@ -32,7 +32,7 @@ runs:
         echo "GEMINI_API_KEY is set (length: ${#GEMINI_API_KEY})."
 
     - name: 'Run tests (example)'
-      shell: bash
+      shell: 'bash'
       working-directory: '${{ inputs.working-directory }}'
       run: |
         npm ci

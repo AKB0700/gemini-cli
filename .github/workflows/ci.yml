@@ -137,10 +137,10 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: Run preflight & tests via composite action
-        uses: ./.github/actions/run-tests
+      - name: 'Run preflight & tests via composite action'
+        uses: './.github/actions/run-tests'
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           working-directory: '.'
 
       - name: 'Bundle'
@@ -200,10 +200,10 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: Run preflight & tests via composite action
-        uses: ./.github/actions/run-tests
+      - name: 'Run preflight & tests via composite action'
+        uses: './.github/actions/run-tests'
         with:
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           working-directory: '.'
 
       - name: 'Bundle'
