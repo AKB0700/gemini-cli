@@ -5,14 +5,17 @@
  */
 
 import nock from 'nock';
+import { GITHUB_WORKFLOW_PATHS, GITHUB_COMMANDS_PATHS } from '../../src/ui/commands/setupGithubCommand.js';
 
 /**
  * Install a nock stub to intercept the specific raw.githubusercontent.com
  * request used by setupGithubCommand tests and return a small mock workflow.
  *
  * This function also disables real network connections to avoid flakiness.
+ * 
+ * @param releaseTag - The release tag to use for the mocked URLs (default: 'v1.2.3')
  */
-export function installSetupGithubNock() {
+export function installSetupGithubNock(releaseTag = 'v1.2.3') {
   // Prevent any real network calls during tests (except those explicitly allowed)
   nock.disableNetConnect();
 
@@ -21,22 +24,7 @@ export function installSetupGithubNock() {
 
   // Mock all workflow and command file downloads
   // The test expects the filename to be returned as content
-  const workflows = [
-    'gemini-dispatch/gemini-dispatch.yml',
-    'gemini-assistant/gemini-invoke.yml',
-    'issue-triage/gemini-triage.yml',
-    'issue-triage/gemini-scheduled-triage.yml',
-    'pr-review/gemini-review.yml',
-  ];
-
-  const commands = [
-    'gemini-assistant/gemini-invoke.toml',
-    'issue-triage/gemini-scheduled-triage.toml',
-    'issue-triage/gemini-triage.toml',
-    'pr-review/gemini-review.toml',
-  ];
-
-  const allPaths = [...workflows, ...commands];
+  const allPaths = [...GITHUB_WORKFLOW_PATHS, ...GITHUB_COMMANDS_PATHS];
 
   const scope = nock('https://raw.githubusercontent.com');
 
@@ -44,7 +32,7 @@ export function installSetupGithubNock() {
   for (const filePath of allPaths) {
     const filename = filePath.split('/').pop() || '';
     scope
-      .get(`/google-github-actions/run-gemini-cli/refs/tags/v1.2.3/examples/workflows/${filePath}`)
+      .get(`/google-github-actions/run-gemini-cli/refs/tags/${releaseTag}/examples/workflows/${filePath}`)
       .reply(200, filename, {
         'Content-Type': 'text/plain',
       });

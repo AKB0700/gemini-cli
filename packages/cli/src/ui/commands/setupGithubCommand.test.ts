@@ -56,6 +56,9 @@ describe('setupGithubCommand', async () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     if (scratchDir) await fs.rm(scratchDir, { recursive: true });
+    // Ensure nock is restored after each test for proper isolation
+    cleanupSetupGithubNock();
+    installSetupGithubNock();
   });
 
   it('returns a tool action to download github workflows and handles paths', async () => {
@@ -139,7 +142,7 @@ describe('setupGithubCommand', async () => {
     // Use persist() to match all requests and return 404
     nock('https://raw.githubusercontent.com')
       .persist()
-      .get(/\/google-github-actions\/run-gemini-cli\/refs\/tags\/v1\.2\.3\/examples\/workflows\/.*/)
+      .get(new RegExp(`/google-github-actions/run-gemini-cli/refs/tags/${fakeReleaseVersion}/examples/workflows/.*`))
       .reply(404, 'Not Found');
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
@@ -155,10 +158,6 @@ describe('setupGithubCommand', async () => {
     await expect(
       setupGithubCommand.action?.({} as CommandContext, ''),
     ).rejects.toThrow(/Invalid response code downloading.*404 - Not Found/);
-    
-    // Restore the nock setup for other tests
-    cleanupSetupGithubNock();
-    installSetupGithubNock();
   });
 });
 
