@@ -8,7 +8,8 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { vi, describe, expect, it, afterEach, beforeEach } from 'vitest';
+import { vi, describe, expect, it, afterEach, beforeEach, beforeAll, afterAll } from 'vitest';
+import nock from 'nock';
 import * as gitUtils from '../../utils/gitUtils.js';
 import {
   setupGithubCommand,
@@ -19,11 +20,9 @@ import {
 import type { CommandContext, ToolActionReturn } from './types.js';
 import * as commandUtils from '../utils/commandUtils.js';
 import { debugLogger } from '@google/gemini-cli-core';
+import { installSetupGithubNock, cleanupSetupGithubNock } from '../../../test/nock-stubs/setupGithubNock.js';
 
 vi.mock('child_process');
-
-// Mock fetch globally
-global.fetch = vi.fn();
 
 vi.mock('../../utils/gitUtils.js', () => ({
   isGitHubRepository: vi.fn(),
@@ -35,6 +34,14 @@ vi.mock('../../utils/gitUtils.js', () => ({
 vi.mock('../utils/commandUtils.js', () => ({
   getUrlOpenCommand: vi.fn(),
 }));
+
+beforeAll(() => {
+  installSetupGithubNock();
+});
+
+afterAll(() => {
+  cleanupSetupGithubNock();
+});
 
 describe('setupGithubCommand', async () => {
   let scratchDir = '';
@@ -59,15 +66,6 @@ describe('setupGithubCommand', async () => {
 
     const workflows = GITHUB_WORKFLOW_PATHS.map((p) => path.basename(p));
     const commands = GITHUB_COMMANDS_PATHS.map((p) => path.basename(p));
-
-    vi.mocked(global.fetch).mockImplementation(async (url) => {
-      const filename = path.basename(url.toString());
-      return new Response(filename, {
-        status: 200,
-        statusText: 'OK',
-        headers: { 'Content-Type': 'text/plain' },
-      });
-    });
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
     vi.mocked(gitUtils.getGitRepoRoot).mockReturnValueOnce(fakeRepoRoot);
@@ -134,12 +132,15 @@ describe('setupGithubCommand', async () => {
     const fakeRepoRoot = scratchDir;
     const fakeReleaseVersion = 'v1.2.3';
 
-    vi.mocked(global.fetch).mockResolvedValue(
-      new Response('Not Found', {
-        status: 404,
-        statusText: 'Not Found',
-      }),
-    );
+    // Clean up existing nock interceptors and set up a new one for 404 response
+    cleanupSetupGithubNock();
+    
+    nock.disableNetConnect();
+    // Use persist() to match all requests and return 404
+    nock('https://raw.githubusercontent.com')
+      .persist()
+      .get(/\/google-github-actions\/run-gemini-cli\/refs\/tags\/v1\.2\.3\/examples\/workflows\/.*/)
+      .reply(404, 'Not Found');
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
     vi.mocked(gitUtils.getGitRepoRoot).mockReturnValueOnce(fakeRepoRoot);
@@ -154,6 +155,10 @@ describe('setupGithubCommand', async () => {
     await expect(
       setupGithubCommand.action?.({} as CommandContext, ''),
     ).rejects.toThrow(/Invalid response code downloading.*404 - Not Found/);
+    
+    // Restore the nock setup for other tests
+    cleanupSetupGithubNock();
+    installSetupGithubNock();
   });
 });
 
