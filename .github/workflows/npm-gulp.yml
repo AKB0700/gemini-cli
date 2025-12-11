@@ -1,28 +1,31 @@
-name: NodeJS with Gulp
+name: 'NodeJS with Gulp'
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['main']
   pull_request:
-    branches: [ "main" ]
+    branches: ['main']
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: ['18.x', '20.x', '22.x']
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: 'actions/checkout@v4'
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: 'Use Node.js ${{ matrix.node-version }}'
+        uses: 'actions/setup-node@v4'
+        with:
+          node-version: '${{ matrix.node-version }}'
 
-    - name: Build
-      run: |
-        npm install
-        gulp
+      - name: 'Run preflight & tests via composite action'
+        uses: './.github/actions/run-tests'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          working-directory: '.'
