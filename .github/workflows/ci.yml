@@ -137,16 +137,11 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: 'Build project'
-        run: 'npm run build'
-
-      - name: 'Install dependencies for testing'
-        run: 'npm ci'
-
-      - name: 'Run tests and generate reports'
-        env:
-          NO_COLOR: true
-        run: 'npm run test:ci'
+      - name: 'Run preflight & tests via composite action'
+        uses: './.github/actions/run-tests'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          working-directory: '.'
 
       - name: 'Bundle'
         run: 'npm run bundle'
@@ -205,16 +200,11 @@ jobs:
           node-version: '${{ matrix.node-version }}'
           cache: 'npm'
 
-      - name: 'Build project'
-        run: 'npm run build'
-
-      - name: 'Install dependencies for testing'
-        run: 'npm ci'
-
-      - name: 'Run tests and generate reports'
-        env:
-          NO_COLOR: true
-        run: 'npm run test:ci -- --coverage.enabled=false'
+      - name: 'Run preflight & tests via composite action'
+        uses: './.github/actions/run-tests'
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          working-directory: '.'
 
       - name: 'Bundle'
         run: 'npm run bundle'
@@ -336,6 +326,9 @@ jobs:
           npm config set registry https://registry.npmjs.org/
         shell: 'pwsh'
 
+      # TODO: Consider migrating to composite action ./.github/actions/run-tests
+      # Current Windows-specific NODE_OPTIONS and shell configuration needs to be
+      # preserved or adapted in the composite action before migration.
       - name: 'Install dependencies'
         run: 'npm ci'
         shell: 'pwsh'
