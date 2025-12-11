@@ -9,7 +9,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 import { vi, describe, expect, it, afterEach, beforeEach, beforeAll, afterAll } from 'vitest';
-import nock from 'nock';
 import * as gitUtils from '../../utils/gitUtils.js';
 import {
   setupGithubCommand,
@@ -20,7 +19,7 @@ import {
 import type { CommandContext, ToolActionReturn } from './types.js';
 import * as commandUtils from '../utils/commandUtils.js';
 import { debugLogger } from '@google/gemini-cli-core';
-import { installSetupGithubNock, cleanupSetupGithubNock } from '../../../test/nock-stubs/setupGithubNock.js';
+import { installSetupGithubNock, cleanupSetupGithubNock, installSetupGithubNockFailure } from '../../../test/nock-stubs/setupGithubNock.js';
 
 vi.mock('child_process');
 
@@ -137,13 +136,7 @@ describe('setupGithubCommand', async () => {
 
     // Clean up existing nock interceptors and set up a new one for 404 response
     cleanupSetupGithubNock();
-    
-    nock.disableNetConnect();
-    // Use persist() to match all requests and return 404
-    nock('https://raw.githubusercontent.com')
-      .persist()
-      .get(new RegExp(`/google-github-actions/run-gemini-cli/refs/tags/${fakeReleaseVersion}/examples/workflows/.*`))
-      .reply(404, 'Not Found');
+    installSetupGithubNockFailure(fakeReleaseVersion);
 
     vi.mocked(gitUtils.isGitHubRepository).mockReturnValueOnce(true);
     vi.mocked(gitUtils.getGitRepoRoot).mockReturnValueOnce(fakeRepoRoot);

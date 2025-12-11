@@ -50,3 +50,21 @@ export function cleanupSetupGithubNock() {
   // Re-enable network connections for subsequent processes
   nock.enableNetConnect();
 }
+
+/**
+ * Install a nock stub that returns 404 errors for all requests.
+ * Useful for testing error handling.
+ * 
+ * @param releaseTag - The release tag to use for the mocked URLs (default: 'v1.2.3')
+ */
+export function installSetupGithubNockFailure(releaseTag = 'v1.2.3') {
+  nock.disableNetConnect();
+  
+  // Use persist() to match all requests and return 404
+  const scope = nock('https://raw.githubusercontent.com')
+    .persist()
+    .get(new RegExp(`/google-github-actions/run-gemini-cli/refs/tags/${releaseTag}/examples/workflows/.*`))
+    .reply(404, 'Not Found');
+  
+  return scope;
+}
