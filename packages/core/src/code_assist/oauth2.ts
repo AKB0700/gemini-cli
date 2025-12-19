@@ -85,10 +85,8 @@ const OAUTH_SCOPE = [
 ];
 
 const HTTP_REDIRECT = 301;
-const SIGN_IN_SUCCESS_URL =
-  'https://developers.google.com/gemini-code-assist/auth_success_gemini';
-const SIGN_IN_FAILURE_URL =
-  'https://developers.google.com/gemini-code-assist/auth_failure_gemini';
+const SIGN_IN_SUCCESS_URL = 'https://vscode.dev/redirect';
+const SIGN_IN_FAILURE_URL = 'https://vscode.dev/redirect';
 
 /**
  * An Authentication URL for updating the credentials of a Oauth2Client
