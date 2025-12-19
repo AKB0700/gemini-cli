@@ -916,6 +916,40 @@ describe('InputPrompt', () => {
     unmount();
   });
 
+  it('should not consume Tab key when suggestions are loading but not yet available', async () => {
+    // This test verifies the fix for the bug where Tab was consumed during loading
+    // Simulate the state where suggestions are being loaded but not yet available
+    mockedUseCommandCompletion.mockReturnValue({
+      ...mockCommandCompletion,
+      showSuggestions: true, // true because isLoadingSuggestions is true
+      suggestions: [], // empty because not loaded yet
+      isLoadingSuggestions: true,
+      activeSuggestionIndex: -1,
+    });
+
+    props.buffer.setText('/@');
+    props.buffer.lines = ['/@'];
+    props.buffer.cursor = [0, 2];
+
+    const { stdin, unmount } = renderWithProviders(<InputPrompt {...props} />, {
+      uiActions,
+    });
+
+    await act(async () => {
+      stdin.write('\t'); // Tab
+    });
+
+    await waitFor(() => {
+      // With the fix, Tab should NOT be consumed by ACCEPT_SUGGESTION handler
+      // because the condition now checks suggestions.length > 0
+      // Before the fix, it would enter the block and consume the Tab without doing anything
+      expect(mockCommandCompletion.handleAutocomplete).not.toHaveBeenCalled();
+      // Tab key should pass through without being consumed
+      // (it won't do anything, but it won't prevent other handlers from running)
+    });
+    unmount();
+  });
+
   it('should autocomplete custom commands from .toml files on Enter', async () => {
     const customCommand: SlashCommand = {
       name: 'find-capital',

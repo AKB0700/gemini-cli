@@ -594,7 +594,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return;
       }
 
-      if (completion.showSuggestions) {
+      // Handle suggestions only when they're actually available (not just being loaded).
+      // showSuggestions can be true during loading (isLoadingSuggestions=true) even when
+      // suggestions.length is 0. We check both to avoid consuming keys without action.
+      if (completion.showSuggestions && completion.suggestions.length > 0) {
         if (completion.suggestions.length > 1) {
           if (keyMatchers[Command.COMPLETION_UP](key)) {
             completion.navigateUp();
@@ -609,60 +612,56 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         }
 
         if (keyMatchers[Command.ACCEPT_SUGGESTION](key)) {
-          if (completion.suggestions.length > 0) {
-            const targetIndex =
-              completion.activeSuggestionIndex === -1
-                ? 0 // Default to the first if none is active
-                : completion.activeSuggestionIndex;
+          const targetIndex =
+            completion.activeSuggestionIndex === -1
+              ? 0 // Default to the first if none is active
+              : completion.activeSuggestionIndex;
 
-            if (targetIndex < completion.suggestions.length) {
-              const suggestion = completion.suggestions[targetIndex];
+          if (targetIndex < completion.suggestions.length) {
+            const suggestion = completion.suggestions[targetIndex];
 
-              const isEnterKey = key.name === 'return' && !key.ctrl;
+            const isEnterKey = key.name === 'return' && !key.ctrl;
 
-              if (isEnterKey && buffer.text.startsWith('/')) {
-                const { isArgumentCompletion, leafCommand } =
-                  completion.slashCompletionRange;
+            if (isEnterKey && buffer.text.startsWith('/')) {
+              const { isArgumentCompletion, leafCommand } =
+                completion.slashCompletionRange;
 
+              if (
+                isArgumentCompletion &&
+                isAutoExecutableCommand(leafCommand)
+              ) {
+                // isArgumentCompletion guarantees leafCommand exists
+                const completedText = completion.getCompletedText(suggestion);
+                if (completedText) {
+                  setExpandedSuggestionIndex(-1);
+                  handleSubmit(completedText.trim());
+                  return;
+                }
+              } else if (!isArgumentCompletion) {
+                // Existing logic for command name completion
+                const command = completion.getCommandFromSuggestion(suggestion);
+
+                // Only auto-execute if the command has no completion function
+                // (i.e., it doesn't require an argument to be selected)
                 if (
-                  isArgumentCompletion &&
-                  isAutoExecutableCommand(leafCommand)
+                  command &&
+                  isAutoExecutableCommand(command) &&
+                  !command.completion
                 ) {
-                  // isArgumentCompletion guarantees leafCommand exists
                   const completedText = completion.getCompletedText(suggestion);
+
                   if (completedText) {
                     setExpandedSuggestionIndex(-1);
                     handleSubmit(completedText.trim());
                     return;
                   }
-                } else if (!isArgumentCompletion) {
-                  // Existing logic for command name completion
-                  const command =
-                    completion.getCommandFromSuggestion(suggestion);
-
-                  // Only auto-execute if the command has no completion function
-                  // (i.e., it doesn't require an argument to be selected)
-                  if (
-                    command &&
-                    isAutoExecutableCommand(command) &&
-                    !command.completion
-                  ) {
-                    const completedText =
-                      completion.getCompletedText(suggestion);
-
-                    if (completedText) {
-                      setExpandedSuggestionIndex(-1);
-                      handleSubmit(completedText.trim());
-                      return;
-                    }
-                  }
                 }
               }
-
-              // Default behavior: auto-complete to prompt box
-              completion.handleAutocomplete(targetIndex);
-              setExpandedSuggestionIndex(-1); // Reset expansion after selection
             }
+
+            // Default behavior: auto-complete to prompt box
+            completion.handleAutocomplete(targetIndex);
+            setExpandedSuggestionIndex(-1); // Reset expansion after selection
           }
           return;
         }
