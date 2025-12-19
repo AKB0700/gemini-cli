@@ -8,7 +8,16 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-import { vi, describe, expect, it, afterEach, beforeEach } from 'vitest';
+import {
+  vi,
+  describe,
+  expect,
+  it,
+  afterEach,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
 import * as gitUtils from '../../utils/gitUtils.js';
 import {
   setupGithubCommand,
@@ -19,10 +28,14 @@ import type { CommandContext } from './types.js';
 import * as commandUtils from '../utils/commandUtils.js';
 import type { ToolActionReturn } from '@google/gemini-cli-core';
 import { debugLogger } from '@google/gemini-cli-core';
+import {
+  installSetupGithubNock,
+  cleanupSetupGithubNock,
+} from '../../../test/nock-stubs/setupGithubNock.js';
 
 vi.mock('child_process');
 
-// Mock fetch globally
+// Mock fetch globally - nock doesn't intercept native fetch, so we need this
 global.fetch = vi.fn();
 
 vi.mock('../../utils/gitUtils.js', () => ({
@@ -35,6 +48,14 @@ vi.mock('../../utils/gitUtils.js', () => ({
 vi.mock('../utils/commandUtils.js', () => ({
   getUrlOpenCommand: vi.fn(),
 }));
+
+beforeAll(() => {
+  installSetupGithubNock();
+});
+
+afterAll(() => {
+  cleanupSetupGithubNock();
+});
 
 describe('setupGithubCommand', async () => {
   let scratchDir = '';
