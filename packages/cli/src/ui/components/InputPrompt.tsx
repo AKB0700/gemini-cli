@@ -594,6 +594,9 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return;
       }
 
+      // Handle suggestions only when they're actually available (not just being loaded).
+      // showSuggestions can be true during loading (isLoadingSuggestions=true) even when
+      // suggestions.length is 0. We check both to avoid consuming keys without action.
       if (completion.showSuggestions && completion.suggestions.length > 0) {
         if (completion.suggestions.length > 1) {
           if (keyMatchers[Command.COMPLETION_UP](key)) {
