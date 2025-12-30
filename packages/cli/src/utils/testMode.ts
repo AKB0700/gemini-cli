@@ -19,8 +19,8 @@ export function isIntegrationTestMode(): boolean {
  * - Using fake responses (--fake-responses or --record-responses)
  * - Running in integration test mode
  *
- * @param fakeResponses - Path to fake responses file (from argv or config)
- * @param recordResponses - Path to record responses file (from argv or config)
+ * @param fakeResponses - Path to fake responses file (from argv or config), or undefined if not using fake responses
+ * @param recordResponses - Path to record responses file (from argv or config), or undefined if not recording responses
  * @returns true if authentication should be skipped, false otherwise
  */
 export function shouldSkipAuth(
