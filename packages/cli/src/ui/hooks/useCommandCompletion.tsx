@@ -266,11 +266,6 @@ export function useCommandCompletion(
         return;
       }
       const suggestion = suggestions[indexToUse];
-      const completedText = getCompletedText(suggestion);
-
-      if (completedText === null) {
-        return;
-      }
 
       let start = completionStart;
       let end = completionEnd;
@@ -279,9 +274,11 @@ export function useCommandCompletion(
         end = slashCompletionRange.completionEnd;
       }
 
-      // Add space padding for Tab completion (auto-execute gets padding from getCompletedText)
+      // Build the suggestion text with proper spacing
+      // Leading space is handled by getCompletedText for slash commands
       let suggestionText = suggestion.value;
       if (completionMode === CompletionMode.SLASH) {
+        // Add leading space if completing a subcommand (cursor is after parent command with no space)
         if (
           start === end &&
           start > 1 &&
@@ -291,6 +288,7 @@ export function useCommandCompletion(
         }
       }
 
+      // Add trailing space for Tab completion unless the suggestion ends with a path separator
       const lineCodePoints = toCodePoints(buffer.lines[cursorRow] || '');
       const charAfterCompletion = lineCodePoints[end];
       if (
@@ -315,7 +313,6 @@ export function useCommandCompletion(
       completionStart,
       completionEnd,
       slashCompletionRange,
-      getCompletedText,
     ],
   );
 
