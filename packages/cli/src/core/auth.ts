@@ -9,6 +9,7 @@ import {
   type Config,
   getErrorMessage,
 } from '@google/gemini-cli-core';
+import { shouldSkipAuth } from '../utils/testMode.js';
 
 /**
  * Handles the initial authentication flow.
@@ -21,6 +22,11 @@ export async function performInitialAuth(
   authType: AuthType | undefined,
 ): Promise<string | null> {
   if (!authType) {
+    return null;
+  }
+
+  // Skip auth validation if using fake responses (test mode)
+  if (shouldSkipAuth(config.fakeResponses, config.recordResponses)) {
     return null;
   }
 
