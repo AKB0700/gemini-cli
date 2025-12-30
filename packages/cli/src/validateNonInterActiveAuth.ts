@@ -37,6 +37,17 @@ export async function validateNonInteractiveAuth(
   settings: LoadedSettings,
 ) {
   try {
+    // Skip auth validation if using fake responses (test mode)
+    const usingFakeResponses =
+      nonInteractiveConfig.fakeResponses ||
+      nonInteractiveConfig.recordResponses;
+    const isIntegrationTest = !!process.env['INTEGRATION_TEST_FILE_DIR'];
+
+    if (usingFakeResponses || isIntegrationTest) {
+      // Still need to return config, but skip auth validation
+      return nonInteractiveConfig;
+    }
+
     const effectiveAuthType = configuredAuthType || getAuthTypeFromEnv();
 
     const enforcedType = settings.merged.security?.auth?.enforcedType;

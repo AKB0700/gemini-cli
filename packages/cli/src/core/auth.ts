@@ -24,6 +24,14 @@ export async function performInitialAuth(
     return null;
   }
 
+  // Skip auth validation if using fake responses (test mode)
+  const usingFakeResponses = config.fakeResponses || config.recordResponses;
+  const isIntegrationTest = !!process.env['INTEGRATION_TEST_FILE_DIR'];
+
+  if (usingFakeResponses || isIntegrationTest) {
+    return null;
+  }
+
   try {
     await config.refreshAuth(authType);
     // The console.log is intentionally left out here.
