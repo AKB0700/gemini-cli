@@ -78,6 +78,7 @@ import { checkForUpdates } from './ui/utils/updateCheck.js';
 import { handleAutoUpdate } from './utils/handleAutoUpdate.js';
 import { appEvents, AppEvent } from './utils/events.js';
 import { SessionSelector } from './utils/sessionUtils.js';
+import { shouldSkipAuth } from './utils/testMode.js';
 import { computeWindowTitle } from './utils/windowTitle.js';
 import { SettingsContext } from './ui/contexts/SettingsContext.js';
 import { MouseProvider } from './ui/contexts/MouseContext.js';
@@ -393,14 +394,10 @@ export async function main() {
       );
 
       // Skip auth validation if using fake responses (test mode)
-      const usingFakeResponses = argv.fakeResponses || argv.recordResponses;
-      const isIntegrationTest = !!process.env['INTEGRATION_TEST_FILE_DIR'];
-
       if (
         settings.merged.security?.auth?.selectedType &&
         !settings.merged.security?.auth?.useExternal &&
-        !usingFakeResponses &&
-        !isIntegrationTest
+        !shouldSkipAuth(argv.fakeResponses, argv.recordResponses)
       ) {
         // Validate authentication here because the sandbox will interfere with the Oauth2 web redirect.
         try {

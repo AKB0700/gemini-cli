@@ -16,6 +16,7 @@ import { validateAuthMethod } from './config/auth.js';
 import { type LoadedSettings } from './config/settings.js';
 import { handleError } from './utils/errors.js';
 import { runExitCleanup } from './utils/cleanup.js';
+import { shouldSkipAuth } from './utils/testMode.js';
 
 function getAuthTypeFromEnv(): AuthType | undefined {
   if (process.env['GOOGLE_GENAI_USE_GCA'] === 'true') {
@@ -38,12 +39,12 @@ export async function validateNonInteractiveAuth(
 ) {
   try {
     // Skip auth validation if using fake responses (test mode)
-    const usingFakeResponses =
-      nonInteractiveConfig.fakeResponses ||
-      nonInteractiveConfig.recordResponses;
-    const isIntegrationTest = !!process.env['INTEGRATION_TEST_FILE_DIR'];
-
-    if (usingFakeResponses || isIntegrationTest) {
+    if (
+      shouldSkipAuth(
+        nonInteractiveConfig.fakeResponses,
+        nonInteractiveConfig.recordResponses,
+      )
+    ) {
       // Still need to return config, but skip auth validation
       return nonInteractiveConfig;
     }
