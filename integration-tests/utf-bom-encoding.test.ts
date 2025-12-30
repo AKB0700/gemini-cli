@@ -55,6 +55,10 @@ describe('BOM end-to-end integraion', () => {
     rig = new TestRig();
     await rig.setup('bom-integration', {
       settings: { tools: { core: ['read_file'] } },
+      fakeResponsesPath: resolve(
+        import.meta.dirname,
+        'utf-bom-encoding.responses',
+      ),
     });
     dir = rig.testDir!;
   });

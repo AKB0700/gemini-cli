@@ -37,6 +37,15 @@ export async function validateNonInteractiveAuth(
   settings: LoadedSettings,
 ) {
   try {
+    // If using fake responses, skip auth validation but still initialize content generator
+    if (nonInteractiveConfig.fakeResponses) {
+      // For fake responses, we use a dummy auth type that won't require real credentials
+      // The FakeContentGenerator will be created later in refreshAuth
+      const dummyAuthType = AuthType.USE_GEMINI;
+      await nonInteractiveConfig.refreshAuth(dummyAuthType);
+      return nonInteractiveConfig;
+    }
+
     const effectiveAuthType = configuredAuthType || getAuthTypeFromEnv();
 
     const enforcedType = settings.merged.security?.auth?.enforcedType;
