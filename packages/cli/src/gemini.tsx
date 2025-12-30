@@ -392,9 +392,13 @@ export async function main() {
         argv,
       );
 
+      // Skip auth validation if using fake responses (test mode)
+      const usingFakeResponses = argv.fakeResponses || argv.recordResponses;
+
       if (
         settings.merged.security?.auth?.selectedType &&
-        !settings.merged.security?.auth?.useExternal
+        !settings.merged.security?.auth?.useExternal &&
+        !usingFakeResponses
       ) {
         // Validate authentication here because the sandbox will interfere with the Oauth2 web redirect.
         try {
