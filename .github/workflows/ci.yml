@@ -145,6 +145,7 @@ jobs:
 
       - name: 'Run tests and generate reports'
         env:
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           NO_COLOR: true
         run: 'npm run test:ci'
 
@@ -213,6 +214,7 @@ jobs:
 
       - name: 'Run tests and generate reports'
         env:
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           NO_COLOR: true
         run: 'npm run test:ci -- --coverage.enabled=false'
 
