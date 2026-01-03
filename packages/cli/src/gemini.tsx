@@ -394,9 +394,11 @@ export async function main() {
 
       if (
         settings.merged.security?.auth?.selectedType &&
-        !settings.merged.security?.auth?.useExternal
+        !settings.merged.security?.auth?.useExternal &&
+        !partialConfig.fakeResponses
       ) {
         // Validate authentication here because the sandbox will interfere with the Oauth2 web redirect.
+        // Skip authentication when using fake responses for testing.
         try {
           const err = validateAuthMethod(
             settings.merged.security.auth.selectedType,
@@ -413,6 +415,9 @@ export async function main() {
           await runExitCleanup();
           process.exit(ExitCodes.FATAL_AUTHENTICATION_ERROR);
         }
+      } else if (partialConfig.fakeResponses) {
+        // Initialize FakeContentGenerator when using fake responses
+        await partialConfig.refreshAuth(AuthType.USE_GEMINI);
       }
       let stdinData = '';
       if (!process.stdin.isTTY) {

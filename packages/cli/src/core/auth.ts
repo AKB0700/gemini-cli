@@ -20,6 +20,18 @@ export async function performInitialAuth(
   config: Config,
   authType: AuthType | undefined,
 ): Promise<string | null> {
+  // Skip authentication when using fake responses for testing
+  if (config.fakeResponses) {
+    try {
+      // Still need to call refreshAuth to initialize the FakeContentGenerator
+      // Use a dummy auth type since it won't be used
+      await config.refreshAuth('gemini-api-key' as AuthType);
+    } catch (e) {
+      return `Failed to initialize fake responses. Message: ${getErrorMessage(e)}`;
+    }
+    return null;
+  }
+
   if (!authType) {
     return null;
   }
