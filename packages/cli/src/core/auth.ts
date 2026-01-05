@@ -24,6 +24,11 @@ export async function performInitialAuth(
     return null;
   }
 
+  // Skip authentication if using fake responses for testing
+  if (config.fakeResponses) {
+    return null;
+  }
+
   try {
     await config.refreshAuth(authType);
     // The console.log is intentionally left out here.

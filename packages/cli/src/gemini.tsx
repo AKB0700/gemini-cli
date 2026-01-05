@@ -394,7 +394,8 @@ export async function main() {
 
       if (
         settings.merged.security?.auth?.selectedType &&
-        !settings.merged.security?.auth?.useExternal
+        !settings.merged.security?.auth?.useExternal &&
+        !argv.fakeResponses
       ) {
         // Validate authentication here because the sandbox will interfere with the Oauth2 web redirect.
         try {
