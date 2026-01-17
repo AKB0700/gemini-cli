@@ -51,6 +51,7 @@ const renderComponent = (
         getDebugMode: vi.fn(() => false),
         getContentGeneratorConfig: vi.fn(() => ({ authType: 'mock' })),
         getUseSmartEdit: vi.fn(() => false),
+        getUseAutomatedErrorCorrection: vi.fn(() => true),
         getProxy: vi.fn(() => undefined),
         isInteractive: vi.fn(() => false),
         getExperiments: () => {},

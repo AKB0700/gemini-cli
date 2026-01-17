@@ -295,7 +295,7 @@ describe('ClearcutLogger', () => {
 
     it('logs all user settings', () => {
       const { logger } = setup({
-        config: { useSmartEdit: true },
+        config: { useSmartEdit: true, useAutomatedErrorCorrection: true },
       });
 
       vi.stubEnv('TERM_PROGRAM', 'vscode');

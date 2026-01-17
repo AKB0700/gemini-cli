@@ -1137,6 +1137,16 @@ const SETTINGS_SCHEMA = {
     description: 'Enable the smart-edit tool instead of the replace tool.',
     showInDialog: false,
   },
+  useAutomatedErrorCorrection: {
+    type: 'boolean',
+    label: 'Use Automated Error Correction',
+    category: 'Advanced',
+    requiresRestart: false,
+    default: true,
+    description:
+      'When enabled, automatically attempts to correct failed edit operations using LLM-based analysis. This feature analyzes the error, file content, and original instruction to generate corrected search/replace parameters. Only applies when useSmartEdit is enabled.',
+    showInDialog: false,
+  },
   useWriteTodos: {
     type: 'boolean',
     label: 'Use WriteTodos',

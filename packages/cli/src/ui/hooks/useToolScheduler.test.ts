@@ -76,6 +76,7 @@ const mockConfig = {
     authType: 'oauth-personal',
   }),
   getUseSmartEdit: () => false,
+  getUseAutomatedErrorCorrection: () => true,
   getGeminiClient: () => null, // No client needed for these tests
   getShellExecutionConfig: () => ({ terminalWidth: 80, terminalHeight: 24 }),
   getEnableMessageBusIntegration: () => false,
