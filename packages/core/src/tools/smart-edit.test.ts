@@ -90,7 +90,6 @@ describe('SmartEditTool', () => {
       getSessionId: vi.fn(() => 'mock-session-id'),
       getContentGeneratorConfig: vi.fn(() => ({ authType: 'mock' })),
       getUseSmartEdit: vi.fn(() => false),
-      getUseAutomatedErrorCorrection: vi.fn(() => true),
       getProxy: vi.fn(() => undefined),
       getGeminiClient: vi.fn().mockReturnValue(geminiClient),
       getBaseLlmClient: vi.fn().mockReturnValue(baseLlmClient),
@@ -530,61 +529,6 @@ describe('SmartEditTool', () => {
         expect(result.error?.type).toBe(expectedError);
       },
     );
-
-    it('should skip automated error correction when useAutomatedErrorCorrection is false', async () => {
-      // Setup config with automated error correction disabled
-      (
-        mockConfig.getUseAutomatedErrorCorrection as ReturnType<typeof vi.fn>
-      ).mockReturnValue(false);
-
-      fs.writeFileSync(filePath, 'content', 'utf8');
-      const invocation = tool.build({
-        file_path: filePath,
-        instruction: 'test',
-        old_string: 'not-found',
-        new_string: 'new',
-      });
-      const result = await invocation.execute(new AbortController().signal);
-
-      // Should return error without attempting correction
-      expect(result.error?.type).toBe(ToolErrorType.EDIT_NO_OCCURRENCE_FOUND);
-      // FixLLMEditWithInstruction should not have been called
-      expect(mockFixLLMEditWithInstruction).not.toHaveBeenCalled();
-
-      // Reset for other tests
-      (
-        mockConfig.getUseAutomatedErrorCorrection as ReturnType<typeof vi.fn>
-      ).mockReturnValue(true);
-    });
-
-    it('should attempt automated error correction when useAutomatedErrorCorrection is true', async () => {
-      // Setup config with automated error correction enabled (default)
-      (
-        mockConfig.getUseAutomatedErrorCorrection as ReturnType<typeof vi.fn>
-      ).mockReturnValue(true);
-
-      fs.writeFileSync(filePath, 'original content', 'utf8');
-      mockFixLLMEditWithInstruction.mockResolvedValueOnce({
-        search: 'original content',
-        replace: 'new content',
-        noChangesRequired: false,
-        explanation: 'Fixed search string',
-      });
-
-      const invocation = tool.build({
-        file_path: filePath,
-        instruction: 'test',
-        old_string: 'not-found',
-        new_string: 'new',
-      });
-      const result = await invocation.execute(new AbortController().signal);
-
-      // Should have attempted correction
-      expect(mockFixLLMEditWithInstruction).toHaveBeenCalled();
-      // Should succeed with the corrected parameters
-      expect(result.error).toBeUndefined();
-      expect(fs.readFileSync(filePath, 'utf8')).toBe('new content');
-    });
   });
 
   describe('expected_replacements', () => {

@@ -618,26 +618,14 @@ class EditToolInvocation
       };
     }
 
-    // If there was an error, try to self-correct if automated error correction is enabled.
-    if (this.config.getUseAutomatedErrorCorrection()) {
-      return this.attemptSelfCorrection(
-        params,
-        currentContent,
-        initialError,
-        abortSignal,
-        originalLineEnding,
-      );
-    }
-
-    // Return the error without attempting correction
-    return {
+    // If there was an error, try to self-correct.
+    return this.attemptSelfCorrection(
+      params,
       currentContent,
-      newContent: currentContent,
-      occurrences: 0,
-      isNewFile: false,
-      error: initialError,
+      initialError,
+      abortSignal,
       originalLineEnding,
-    };
+    );
   }
 
   /**

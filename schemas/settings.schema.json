@@ -1157,13 +1157,6 @@
       "default": true,
       "type": "boolean"
     },
-    "useAutomatedErrorCorrection": {
-      "title": "Use Automated Error Correction",
-      "description": "When enabled, automatically attempts to correct failed edit operations using LLM-based analysis. This feature analyzes the error, file content, and original instruction to generate corrected search/replace parameters. Only applies when useSmartEdit is enabled.",
-      "markdownDescription": "When enabled, automatically attempts to correct failed edit operations using LLM-based analysis. This feature analyzes the error, file content, and original instruction to generate corrected search/replace parameters. Only applies when useSmartEdit is enabled.\n\n- Category: `Advanced`\n- Requires restart: `no`\n- Default: `true`",
-      "default": true,
-      "type": "boolean"
-    },
     "useWriteTodos": {
       "title": "Use WriteTodos",
       "description": "Enable the write_todos tool.",

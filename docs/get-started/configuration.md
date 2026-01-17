@@ -704,27 +704,8 @@ their corresponding top-level category object in your `settings.json` file.
 #### `useSmartEdit`
 
 - **`useSmartEdit`** (boolean):
-  - **Description:** Enable the smart-edit tool instead of the replace tool. The
-    smart-edit tool provides advanced text replacement with flexible matching
-    strategies (exact, whitespace-flexible, and regex-based) to handle various
-    formatting and indentation scenarios.
+  - **Description:** Enable the smart-edit tool instead of the replace tool.
   - **Default:** `true`
-
-#### `useAutomatedErrorCorrection`
-
-- **`useAutomatedErrorCorrection`** (boolean):
-  - **Description:** When enabled, automatically attempts to correct failed edit
-    operations using LLM-based analysis. This feature analyzes the error, file
-    content, and original instruction to generate corrected search/replace
-    parameters. The LLM examines why the initial edit failed (e.g., incorrect
-    whitespace, indentation, or contextual differences) and provides a minimal
-    correction to make the edit succeed. Only applies when `useSmartEdit` is
-    enabled.
-  - **Default:** `true`
-  - **Timeout:** 40 seconds per correction attempt
-  - **Note:** If automated correction fails or times out, the original error is
-    returned. Users can disable this if they prefer to handle all edit failures
-    manually.
 
 #### `useWriteTodos`
 
