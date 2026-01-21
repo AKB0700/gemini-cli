@@ -7,3 +7,49 @@ respond within 5 working days of your report on g.co/vulnz.
 
 [GitHub Security Advisory]:
   https://github.com/google-gemini/gemini-cli/security/advisories
+
+# Verifying Release Authenticity
+
+To ensure the authenticity and integrity of Gemini CLI releases, maintainers may
+sign releases with GPG keys.
+
+## GPG Public Keys
+
+The public GPG keys of Gemini CLI maintainers are available in the [KEYS](KEYS)
+file at the root of this repository. You can import these keys to verify
+signatures on official releases.
+
+## How to Verify a Release
+
+If a release includes a GPG signature:
+
+1. **Import the maintainer keys:**
+
+   First, download the KEYS file:
+
+   ```bash
+   curl -O https://raw.githubusercontent.com/google-gemini/gemini-cli/main/KEYS
+   ```
+
+   Verify the authenticity of the KEYS file (recommended), then import:
+
+   ```bash
+   gpg --import KEYS
+   ```
+
+2. **Download the release and its signature:**
+
+   Download both the release artifact and its corresponding `.asc` signature
+   file from the
+   [GitHub Releases page](https://github.com/google-gemini/gemini-cli/releases).
+
+3. **Verify the signature:**
+
+   ```bash
+   gpg --verify <signature-file> <release-file>
+   ```
+
+4. **Check the output** to ensure the signature is valid and from a trusted
+   maintainer
+
+For more information, see the [KEYS](KEYS) file.

@@ -1,0 +1,56 @@
+This file contains the GPG keys of Gemini CLI maintainers.
+
+Users can import these keys to verify the signatures of official releases:
+
+  gpg --import KEYS
+
+Maintainers can append their key to this file:
+
+  (gpg --list-sigs <key id> && gpg --armor --export <key id>) >> KEYS
+
+────────────────────────────────────────────────────────────────────────────
+
+Instructions for Verifying Releases
+====================================
+
+When a release is signed, maintainers will provide:
+1. The release artifact (e.g., gemini-cli-v1.0.0.tar.gz)
+2. A detached signature file (e.g., gemini-cli-v1.0.0.tar.gz.asc)
+
+To verify a release signature:
+
+  1. Import the KEYS file:
+     gpg --import KEYS
+
+  2. Verify the signature:
+     gpg --verify gemini-cli-v1.0.0.tar.gz.asc gemini-cli-v1.0.0.tar.gz
+
+  3. Check that the signature is from a trusted maintainer
+
+────────────────────────────────────────────────────────────────────────────
+
+Instructions for Maintainers
+=============================
+
+To add your GPG key to this file:
+
+  1. Generate a GPG key if you don't have one:
+     gpg --full-generate-key
+
+  2. List your keys to find the key ID:
+     gpg --list-secret-keys --keyid-format=long
+
+  3. Export your public key and append to this file:
+     (gpg --list-sigs <key-id> && gpg --armor --export <key-id>) >> KEYS
+
+  4. (Optional) Publish your key to a keyserver:
+     gpg --keyserver keyserver.ubuntu.com --send-keys <key-id>
+
+  5. Commit the updated KEYS file to the repository
+
+────────────────────────────────────────────────────────────────────────────
+
+Public Keys
+===========
+
+(Maintainers: Add your GPG public keys below this line)
