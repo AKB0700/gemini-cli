@@ -226,7 +226,7 @@ export default tseslint.config(
   },
   // extra settings for scripts that we run directly with node
   {
-    files: ['./scripts/**/*.js', 'esbuild.config.js'],
+    files: ['./scripts/**/*.js', 'esbuild.config.js', 'gulpfile.js'],
     languageOptions: {
       globals: {
         ...globals.node,
