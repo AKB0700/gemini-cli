@@ -14,8 +14,8 @@ Instructions for Verifying Releases
 ====================================
 
 When a release is signed, maintainers will provide:
-1. The release artifact (e.g., tarball or npm package)
-2. A detached signature file (e.g., release.tar.gz.asc)
+1. The release artifact (e.g., gemini-cli-v1.0.0.tar.gz)
+2. A detached signature file (e.g., gemini-cli-v1.0.0.tar.gz.asc)
 
 To verify a release signature:
 
@@ -23,7 +23,7 @@ To verify a release signature:
      gpg --import KEYS
 
   2. Verify the signature:
-     gpg --verify release.tar.gz.asc release.tar.gz
+     gpg --verify gemini-cli-v1.0.0.tar.gz.asc gemini-cli-v1.0.0.tar.gz
 
   3. Check that the signature is from a trusted maintainer
 

@@ -528,10 +528,11 @@ To sign a release artifact:
 2. **Sign the release artifact:**
 
    ```bash
-   gpg --armor --detach-sign <release-artifact>
+   gpg --armor --detach-sign gemini-cli-v1.0.0.tar.gz
    ```
 
-   This creates a `.asc` signature file alongside the artifact.
+   This creates a `.asc` signature file (e.g., `gemini-cli-v1.0.0.tar.gz.asc`)
+   alongside the artifact.
 
 3. **Attach the signature to the GitHub release:**
 

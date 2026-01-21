@@ -25,8 +25,16 @@ If a release includes a GPG signature:
 
 1. **Import the maintainer keys:**
 
+   First, download the KEYS file:
+
    ```bash
-   curl -s https://raw.githubusercontent.com/google-gemini/gemini-cli/main/KEYS | gpg --import
+   curl -O https://raw.githubusercontent.com/google-gemini/gemini-cli/main/KEYS
+   ```
+
+   Verify the authenticity of the KEYS file (recommended), then import:
+
+   ```bash
+   gpg --import KEYS
    ```
 
 2. **Download the release and its signature** (if provided)
