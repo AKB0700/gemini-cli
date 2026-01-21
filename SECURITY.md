@@ -37,7 +37,11 @@ If a release includes a GPG signature:
    gpg --import KEYS
    ```
 
-2. **Download the release and its signature** (if provided)
+2. **Download the release and its signature:**
+
+   Download both the release artifact and its corresponding `.asc` signature
+   file from the
+   [GitHub Releases page](https://github.com/google-gemini/gemini-cli/releases).
 
 3. **Verify the signature:**
 
