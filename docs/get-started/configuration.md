@@ -718,13 +718,11 @@ their corresponding top-level category object in your `settings.json` file.
     content, and original instruction to generate corrected search/replace
     parameters. The LLM examines why the initial edit failed (e.g., incorrect
     whitespace, indentation, or contextual differences) and provides a minimal
-    correction to make the edit succeed. Only applies when `useSmartEdit` is
-    enabled.
+    correction to make the edit succeed. Only applies when useSmartEdit is
+    enabled. Timeout: 40 seconds per correction attempt. Note: If automated
+    correction fails or times out, the original error is returned. Users can
+    disable this if they prefer to handle all edit failures manually.
   - **Default:** `true`
-  - **Timeout:** 40 seconds per correction attempt
-  - **Note:** If automated correction fails or times out, the original error is
-    returned. Users can disable this if they prefer to handle all edit failures
-    manually.
 
 #### `useWriteTodos`
 

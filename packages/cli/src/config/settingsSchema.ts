@@ -1134,7 +1134,8 @@ const SETTINGS_SCHEMA = {
     category: 'Advanced',
     requiresRestart: false,
     default: true,
-    description: 'Enable the smart-edit tool instead of the replace tool.',
+    description:
+      'Enable the smart-edit tool instead of the replace tool. The smart-edit tool provides advanced text replacement with flexible matching strategies (exact, whitespace-flexible, and regex-based) to handle various formatting and indentation scenarios.',
     showInDialog: false,
   },
   useAutomatedErrorCorrection: {
@@ -1144,7 +1145,7 @@ const SETTINGS_SCHEMA = {
     requiresRestart: false,
     default: true,
     description:
-      'When enabled, automatically attempts to correct failed edit operations using LLM-based analysis. This feature analyzes the error, file content, and original instruction to generate corrected search/replace parameters. Only applies when useSmartEdit is enabled.',
+      'When enabled, automatically attempts to correct failed edit operations using LLM-based analysis. This feature analyzes the error, file content, and original instruction to generate corrected search/replace parameters. The LLM examines why the initial edit failed (e.g., incorrect whitespace, indentation, or contextual differences) and provides a minimal correction to make the edit succeed. Only applies when useSmartEdit is enabled. Timeout: 40 seconds per correction attempt. Note: If automated correction fails or times out, the original error is returned. Users can disable this if they prefer to handle all edit failures manually.',
     showInDialog: false,
   },
   useWriteTodos: {
