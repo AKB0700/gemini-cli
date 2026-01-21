@@ -510,6 +510,39 @@ executable that enables `npx` usage directly from the GitHub repository.
 This dual-artifact process ensures that both traditional `npm` users and those
 who prefer the convenience of `npx` have an optimized experience.
 
+## GPG Signing (Optional)
+
+Maintainers can optionally sign releases with GPG keys to provide an additional
+layer of verification for users. The repository includes a [KEYS](../KEYS) file
+at the root that contains the public GPG keys of maintainers.
+
+### For maintainers: Signing a release
+
+To sign a release artifact:
+
+1. **Ensure your GPG key is in the KEYS file:**
+
+   If you haven't already added your key, follow the instructions in the
+   [KEYS](../KEYS) file to add your public GPG key.
+
+2. **Sign the release artifact:**
+
+   ```bash
+   gpg --armor --detach-sign <release-artifact>
+   ```
+
+   This creates a `.asc` signature file alongside the artifact.
+
+3. **Attach the signature to the GitHub release:**
+
+   When creating the GitHub release, upload the `.asc` signature file as an
+   additional asset.
+
+### For users: Verifying a signed release
+
+Users can verify signed releases by following the instructions in the
+[SECURITY.md](../SECURITY.md#verifying-release-authenticity) file.
+
 ## Notifications
 
 Failing release workflows will automatically create an issue with the label
