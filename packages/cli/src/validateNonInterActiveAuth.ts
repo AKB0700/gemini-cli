@@ -10,6 +10,7 @@ import {
   debugLogger,
   OutputFormat,
   ExitCodes,
+  credentialRetriever,
 } from '@google/gemini-cli-core';
 import { USER_SETTINGS_PATH } from './config/settings.js';
 import { validateAuthMethod } from './config/auth.js';
@@ -17,7 +18,7 @@ import { type LoadedSettings } from './config/settings.js';
 import { handleError } from './utils/errors.js';
 import { runExitCleanup } from './utils/cleanup.js';
 
-function getAuthTypeFromEnv(): AuthType | undefined {
+async function getAuthTypeFromEnv(): Promise<AuthType | undefined> {
   if (process.env['GOOGLE_GENAI_USE_GCA'] === 'true') {
     return AuthType.LOGIN_WITH_GOOGLE;
   }
@@ -27,6 +28,33 @@ function getAuthTypeFromEnv(): AuthType | undefined {
   if (process.env['GEMINI_API_KEY']) {
     return AuthType.USE_GEMINI;
   }
+
+  // Try automatic credential retrieval
+  debugLogger.log(
+    'No explicit auth type found, attempting automatic credential retrieval...',
+  );
+  const credential = await credentialRetriever.retrieveCredentials();
+
+  if (credential) {
+    debugLogger.log(
+      `Automatically detected credentials from: ${credential.source}`,
+    );
+
+    // Set the appropriate environment variable based on the credential source
+    if (credential.authType === 'gemini-api-key' && credential.value) {
+      process.env['GEMINI_API_KEY'] = credential.value;
+      return AuthType.USE_GEMINI;
+    }
+
+    if (credential.authType === 'vertex-ai') {
+      return AuthType.USE_VERTEX_AI;
+    }
+
+    if (credential.authType === 'oauth-personal') {
+      return AuthType.LOGIN_WITH_GOOGLE;
+    }
+  }
+
   return undefined;
 }
 
@@ -37,7 +65,8 @@ export async function validateNonInteractiveAuth(
   settings: LoadedSettings,
 ) {
   try {
-    const effectiveAuthType = configuredAuthType || getAuthTypeFromEnv();
+    const effectiveAuthType =
+      configuredAuthType || (await getAuthTypeFromEnv());
 
     const enforcedType = settings.merged.security.auth.enforcedType;
     if (enforcedType && effectiveAuthType !== enforcedType) {
@@ -48,7 +77,16 @@ export async function validateNonInteractiveAuth(
     }
 
     if (!effectiveAuthType) {
-      const message = `Please set an Auth method in your ${USER_SETTINGS_PATH} or specify one of the following environment variables before running: GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, GOOGLE_GENAI_USE_GCA`;
+      const message =
+        `No authentication credentials found. Please:\n` +
+        `1. Set GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, or GOOGLE_GENAI_USE_GCA environment variable, OR\n` +
+        `2. Configure auth method in ${USER_SETTINGS_PATH}, OR\n` +
+        `3. Authenticate with 'gcloud auth login' (credentials will be auto-detected)\n\n` +
+        `Automatic credential detection checked:\n` +
+        `- Environment variables (GEMINI_API_KEY, GOOGLE_API_KEY)\n` +
+        `- Stored credentials (keychain/file)\n` +
+        `- Google Cloud SDK (gcloud CLI)\n` +
+        `- Application Default Credentials (ADC)`;
       throw new Error(message);
     }
 

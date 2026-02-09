@@ -50,6 +50,7 @@ export * from './code_assist/server.js';
 export * from './code_assist/types.js';
 export * from './code_assist/telemetry.js';
 export * from './core/apiKeyCredentialStorage.js';
+export * from './core/credentialRetrieval.js';
 
 // Export utilities
 export { homedir, tmpdir } from './utils/paths.js';
