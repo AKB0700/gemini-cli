@@ -123,19 +123,17 @@ describe('AutomaticCredentialRetriever', () => {
     it('should return gcloud credentials if available', async () => {
       // Mock exec to simulate gcloud being available
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
+          ) => void;
           if (command === 'which gcloud') {
-            callback?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
-            callback?.(null, { stdout: 'user@example.com\n', stderr: '' });
+            cb?.(null, { stdout: 'user@example.com\n', stderr: '' });
           } else if (command.includes('gcloud auth print-access-token')) {
-            callback?.(null, { stdout: 'ya29.test-token\n', stderr: '' });
+            cb?.(null, { stdout: 'ya29.test-token\n', stderr: '' });
           }
           return {} as ReturnType<typeof exec>;
         },
@@ -152,14 +150,12 @@ describe('AutomaticCredentialRetriever', () => {
 
     it('should return null if gcloud is not installed', async () => {
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
-          callback?.(new Error('gcloud not found'), { stdout: '', stderr: '' });
+          ) => void;
+          cb?.(new Error('gcloud not found'), { stdout: '', stderr: '' });
           return {} as ReturnType<typeof exec>;
         },
       );
@@ -171,17 +167,15 @@ describe('AutomaticCredentialRetriever', () => {
 
     it('should return null if gcloud has no active account', async () => {
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
+          ) => void;
           if (command === 'which gcloud') {
-            callback?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
-            callback?.(null, { stdout: '', stderr: '' });
+            cb?.(null, { stdout: '', stderr: '' });
           }
           return {} as ReturnType<typeof exec>;
         },
@@ -279,14 +273,12 @@ describe('AutomaticCredentialRetriever', () => {
       delete process.env['GOOGLE_API_KEY'];
       vi.mocked(loadApiKey).mockResolvedValue(null);
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
-          callback?.(new Error('not found'), { stdout: '', stderr: '' });
+          ) => void;
+          cb?.(new Error('not found'), { stdout: '', stderr: '' });
           return {} as ReturnType<typeof exec>;
         },
       );
@@ -303,19 +295,17 @@ describe('AutomaticCredentialRetriever', () => {
       process.env['GEMINI_API_KEY'] = 'env-key';
       vi.mocked(loadApiKey).mockResolvedValue('stored-key');
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
+          ) => void;
           if (command === 'which gcloud') {
-            callback?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
-            callback?.(null, { stdout: 'user@example.com\n', stderr: '' });
+            cb?.(null, { stdout: 'user@example.com\n', stderr: '' });
           } else if (command.includes('gcloud auth print-access-token')) {
-            callback?.(null, { stdout: 'ya29.test-token\n', stderr: '' });
+            cb?.(null, { stdout: 'ya29.test-token\n', stderr: '' });
           }
           return {} as ReturnType<typeof exec>;
         },
@@ -333,14 +323,12 @@ describe('AutomaticCredentialRetriever', () => {
       delete process.env['GOOGLE_API_KEY'];
       vi.mocked(loadApiKey).mockResolvedValue(null);
       vi.mocked(exec).mockImplementation(
-        (
-          command: string,
-          callback?: (
+        (command: string, callback?: unknown) => {
+          const cb = callback as (
             error: Error | null,
             result: { stdout: string; stderr: string },
-          ) => void,
-        ) => {
-          callback?.(new Error('not found'), { stdout: '', stderr: '' });
+          ) => void;
+          cb?.(new Error('not found'), { stdout: '', stderr: '' });
           return {} as ReturnType<typeof exec>;
         },
       );

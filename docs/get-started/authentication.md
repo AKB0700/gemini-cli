@@ -5,7 +5,25 @@ quickly find the best way to sign in based on your account type and how you're
 using the CLI.
 
 For most users, we recommend starting Gemini CLI and logging in with your
-personal Google account.
+personal Google account. Gemini CLI features **automatic credential detection**
+that will check multiple sources for available credentials.
+
+## Automatic Credential Detection
+
+Gemini CLI automatically detects and uses credentials from multiple sources in
+the following priority order:
+
+1. **Environment variables**: `GEMINI_API_KEY`, `GOOGLE_API_KEY`, or auth type
+   flags
+2. **Stored credentials**: Previously saved credentials in keychain or encrypted
+   file storage
+3. **Google Cloud SDK**: Active `gcloud` CLI authentication
+4. **Application Default Credentials (ADC)**: Service account or user
+   credentials in well-known locations
+
+This means you can use Gemini CLI without manually configuring authentication if
+you're already logged into `gcloud` or have credentials stored from a previous
+session.
 
 ## Choose your authentication method <a id="auth-methods"></a>
 
@@ -303,14 +321,35 @@ on this page.
 
 ## Running in headless mode <a id="headless"></a>
 
-[Headless mode](../cli/headless) will use your existing authentication method,
-if an existing authentication credential is cached.
+[Headless mode](../cli/headless) will automatically detect and use credentials
+from available sources in the following priority order:
 
-If you have not already logged in with an authentication credential, you must
-configure authentication using environment variables:
+1. **Explicit environment variables** (`GEMINI_API_KEY`, `GOOGLE_API_KEY`, etc.)
+2. **Cached authentication** from previous interactive sessions
+3. **Google Cloud SDK** (`gcloud`) active credentials
+4. **Application Default Credentials** (ADC)
 
-- [Use Gemini API Key](#gemini-api)
-- [Vertex AI](#vertex-ai)
+If you have not already logged in with an authentication credential, you can
+configure authentication using one of these methods:
+
+- [Use Gemini API Key](#gemini-api) - Set `GEMINI_API_KEY` environment variable
+- [Vertex AI](#vertex-ai) - Configure Vertex AI credentials
+- **Use `gcloud` authentication** - Run `gcloud auth login` and the CLI will
+  automatically detect it
+
+### Example: Using gcloud for headless authentication
+
+```bash
+# Authenticate with gcloud (one-time setup)
+gcloud auth login
+
+# Run Gemini CLI in headless mode - credentials auto-detected
+gemini -p "Explain this codebase" --output-format json
+```
+
+This automatic detection eliminates the need to manually configure environment
+variables for headless workflows when you're already authenticated with
+`gcloud`.
 
 ## What's next?
 
