@@ -7,6 +7,7 @@
 import { Box } from 'ink';
 import { Header } from './Header.js';
 import { Tips } from './Tips.js';
+import { UserIdentity } from './UserIdentity.js';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useUIState } from '../contexts/UIStateContext.js';
@@ -21,9 +22,9 @@ interface AppHeaderProps {
 export const AppHeader = ({ version }: AppHeaderProps) => {
   const settings = useSettings();
   const config = useConfig();
-  const { nightly, mainAreaWidth, bannerData, bannerVisible } = useUIState();
+  const { nightly, terminalWidth, bannerData, bannerVisible } = useUIState();
 
-  const { bannerText } = useBanner(bannerData, config);
+  const { bannerText } = useBanner(bannerData);
   const { showTips } = useTips();
 
   return (
@@ -33,12 +34,15 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
           <Header version={version} nightly={nightly} />
           {bannerVisible && bannerText && (
             <Banner
-              width={mainAreaWidth}
+              width={terminalWidth}
               bannerText={bannerText}
               isWarning={bannerData.warningText !== ''}
             />
           )}
         </>
+      )}
+      {settings.merged.ui.showUserIdentity !== false && (
+        <UserIdentity config={config} />
       )}
       {!(settings.merged.ui.hideTips || config.getScreenReader()) &&
         showTips && <Tips config={config} />}

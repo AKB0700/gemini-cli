@@ -55,6 +55,8 @@ powerful tool for developers.
 - **Contributions:** Follow the process outlined in `CONTRIBUTING.md`. Requires
   signing the Google CLA.
 - **Pull Requests:** Keep PRs small, focused, and linked to an existing issue.
+  Always activate the `pr-creator` skill for PR generation, even when using the
+  `gh` CLI.
 - **Commit Messages:** Follow the
   [Conventional Commits](https://www.conventionalcommits.org/) standard.
 - **Coding Style:** Adhere to existing patterns in `packages/cli` (React/Ink)
@@ -62,9 +64,18 @@ powerful tool for developers.
 - **Imports:** Use specific imports and avoid restricted relative imports
   between packages (enforced by ESLint).
 
+## Testing Conventions
+
+- **Environment Variables:** When testing code that depends on environment
+  variables, use `vi.stubEnv('NAME', 'value')` in `beforeEach` and
+  `vi.unstubAllEnvs()` in `afterEach`. Avoid modifying `process.env` directly as
+  it can lead to test leakage and is less reliable. To "unset" a variable, use
+  an empty string `vi.stubEnv('NAME', '')`.
+
 ## Documentation
 
+- Always use the `docs-writer` skill when you are asked to write, edit, or
+  review any documentation.
+- Documentation is located in the `docs/` directory.
 - Suggest documentation updates when code changes render existing documentation
   obsolete or incomplete.
-- Located in the `docs/` directory.
-- Use the `docs-writer` skill.

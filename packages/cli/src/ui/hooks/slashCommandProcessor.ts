@@ -30,6 +30,7 @@ import {
   ToolConfirmationOutcome,
   Storage,
   IdeClient,
+  coreEvents,
   addMCPStatusChangeListener,
   removeMCPStatusChangeListener,
   MCPDiscoveryState,
@@ -55,7 +56,6 @@ import {
   type ExtensionUpdateAction,
   type ExtensionUpdateStatus,
 } from '../state/extensions.js';
-import { appEvents } from '../../utils/events.js';
 import {
   LogoutConfirmationDialog,
   LogoutChoice,
@@ -82,6 +82,8 @@ interface SlashCommandProcessorActions {
   toggleDebugProfiler: () => void;
   dispatchExtensionStateUpdate: (action: ExtensionUpdateAction) => void;
   addConfirmUpdateExtensionRequest: (request: ConfirmationRequest) => void;
+  toggleBackgroundShell: () => void;
+  toggleShortcutsHelp: () => void;
   setText: (text: string) => void;
 }
 
@@ -236,7 +238,10 @@ export const useSlashCommandProcessor = (
         dispatchExtensionStateUpdate: actions.dispatchExtensionStateUpdate,
         addConfirmUpdateExtensionRequest:
           actions.addConfirmUpdateExtensionRequest,
+        setConfirmationRequest,
         removeComponent: () => setCustomDialog(null),
+        toggleBackgroundShell: actions.toggleBackgroundShell,
+        toggleShortcutsHelp: actions.toggleShortcutsHelp,
       },
       session: {
         stats: session.stats,
@@ -256,6 +261,7 @@ export const useSlashCommandProcessor = (
       actions,
       pendingItem,
       setPendingItem,
+      setConfirmationRequest,
       toggleVimEnabled,
       sessionShellAllowlist,
       reloadCommands,
@@ -295,8 +301,8 @@ export const useSlashCommandProcessor = (
       // starting/stopping
       reloadCommands();
     };
-    appEvents.on('extensionsStarting', extensionEventListener);
-    appEvents.on('extensionsStopping', extensionEventListener);
+    coreEvents.on('extensionsStarting', extensionEventListener);
+    coreEvents.on('extensionsStopping', extensionEventListener);
 
     return () => {
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -305,8 +311,8 @@ export const useSlashCommandProcessor = (
         ideClient.removeStatusChangeListener(listener);
       })();
       removeMCPStatusChangeListener(listener);
-      appEvents.off('extensionsStarting', extensionEventListener);
-      appEvents.off('extensionsStopping', extensionEventListener);
+      coreEvents.off('extensionsStarting', extensionEventListener);
+      coreEvents.off('extensionsStopping', extensionEventListener);
     };
   }, [config, reloadCommands]);
 

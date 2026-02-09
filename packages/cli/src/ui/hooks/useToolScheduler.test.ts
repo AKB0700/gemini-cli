@@ -25,7 +25,6 @@ import type {
   AnyToolInvocation,
 } from '@google/gemini-cli-core';
 import {
-  DEFAULT_TRUNCATE_TOOL_OUTPUT_LINES,
   DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD,
   ToolConfirmationOutcome,
   ApprovalMode,
@@ -65,11 +64,11 @@ const mockConfig = {
   getSessionId: () => 'test-session-id',
   getUsageStatisticsEnabled: () => true,
   getDebugMode: () => false,
+  getWorkingDir: () => '/working/dir',
   storage: {
     getProjectTempDir: () => '/tmp',
   },
   getTruncateToolOutputThreshold: () => DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD,
-  getTruncateToolOutputLines: () => DEFAULT_TRUNCATE_TOOL_OUTPUT_LINES,
   getAllowedTools: vi.fn(() => []),
   getActiveModel: () => PREVIEW_GEMINI_MODEL,
   getContentGeneratorConfig: () => ({
@@ -938,7 +937,7 @@ describe('mapToDisplay', () => {
       name: 'validating',
       status: 'validating',
       extraProps: { tool: baseTool, invocation: baseInvocation },
-      expectedStatus: ToolCallStatus.Executing,
+      expectedStatus: ToolCallStatus.Pending,
       expectedName: baseTool.displayName,
       expectedDescription: baseInvocation.getDescription(),
     },

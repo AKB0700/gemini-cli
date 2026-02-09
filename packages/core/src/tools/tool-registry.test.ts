@@ -13,7 +13,7 @@ import { ApprovalMode } from '../policy/types.js';
 
 import { ToolRegistry, DiscoveredTool } from './tool-registry.js';
 import { DISCOVERED_TOOL_PREFIX } from './tool-names.js';
-import { DiscoveredMCPTool } from './mcp-tool.js';
+import { DiscoveredMCPTool, MCP_QUALIFIED_NAME_SEPARATOR } from './mcp-tool.js';
 import type { FunctionDeclaration, CallableTool } from '@google/genai';
 import { mcpToTool } from '@google/genai';
 import { spawn } from 'node:child_process';
@@ -78,6 +78,31 @@ vi.mock('@google/genai', async () => {
       tool: vi.fn().mockResolvedValue({ functionDeclarations: [] }),
       callTool: vi.fn(),
     })),
+  };
+});
+
+// Mock tool-names to provide a consistent alias for testing
+vi.mock('./tool-names.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./tool-names.js')>();
+  const mockedAliases: Record<string, string> = {
+    ...actual.TOOL_LEGACY_ALIASES,
+    legacy_test_tool: 'current_test_tool',
+  };
+  return {
+    ...actual,
+    TOOL_LEGACY_ALIASES: mockedAliases,
+    // Override getToolAliases to use the mocked aliases map
+    getToolAliases: (name: string): string[] => {
+      const aliases = new Set<string>([name]);
+      const canonicalName = mockedAliases[name] ?? name;
+      aliases.add(canonicalName);
+      for (const [legacyName, currentName] of Object.entries(mockedAliases)) {
+        if (currentName === canonicalName) {
+          aliases.add(legacyName);
+        }
+      }
+      return Array.from(aliases);
+    },
   };
 });
 
@@ -277,6 +302,26 @@ describe('ToolRegistry', () => {
         name: 'should match class names',
         tools: [excludedTool],
         excludedTools: ['ExcludedMockTool'],
+      },
+      {
+        name: 'should exclude a tool when its legacy alias is in excludeTools',
+        tools: [
+          new MockTool({
+            name: 'current_test_tool',
+            displayName: 'Current Test Tool',
+          }),
+        ],
+        excludedTools: ['legacy_test_tool'],
+      },
+      {
+        name: 'should exclude a tool when its current name is in excludeTools and tool is registered under current name',
+        tools: [
+          new MockTool({
+            name: 'current_test_tool',
+            displayName: 'Current Test Tool',
+          }),
+        ],
+        excludedTools: ['current_test_tool'],
       },
     ])('$name', ({ tools, excludedTools }) => {
       toolRegistry.registerTool(allowedTool);
@@ -567,6 +612,39 @@ describe('ToolRegistry', () => {
 
       expect(retrievedTool).toBeDefined();
       expect(retrievedTool?.name).toBe(validToolName);
+    });
+
+    it('should resolve qualified names in getFunctionDeclarationsFiltered', () => {
+      const serverName = 'my-server';
+      const toolName = 'my-tool';
+      const mcpTool = createMCPTool(serverName, toolName, 'description');
+
+      toolRegistry.registerTool(mcpTool);
+
+      const fullyQualifiedName = `${serverName}${MCP_QUALIFIED_NAME_SEPARATOR}${toolName}`;
+      const declarations = toolRegistry.getFunctionDeclarationsFiltered([
+        fullyQualifiedName,
+      ]);
+
+      expect(declarations).toHaveLength(1);
+      expect(declarations[0].name).toBe(toolName);
+    });
+
+    it('should retrieve a tool using its legacy alias', async () => {
+      const legacyName = 'legacy_test_tool';
+      const currentName = 'current_test_tool';
+
+      const mockTool = new MockTool({
+        name: currentName,
+        description: 'Test Tool',
+        messageBus: mockMessageBus,
+      });
+
+      toolRegistry.registerTool(mockTool);
+
+      const retrievedTool = toolRegistry.getTool(legacyName);
+      expect(retrievedTool).toBeDefined();
+      expect(retrievedTool?.name).toBe(currentName);
     });
   });
 

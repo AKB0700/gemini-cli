@@ -7,6 +7,7 @@
 import { act } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '../../test-utils/render.js';
+import { waitFor } from '../../test-utils/async.js';
 import { ToolActionsProvider, useToolActions } from './ToolActionsContext.js';
 import {
   type Config,
@@ -155,7 +156,7 @@ describe('ToolActionsContext', () => {
 
     // Wait for IdeClient initialization in useEffect
     await act(async () => {
-      await vi.waitFor(() => expect(IdeClient.getInstance).toHaveBeenCalled());
+      await waitFor(() => expect(IdeClient.getInstance).toHaveBeenCalled());
       // Give React a chance to update state
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -176,5 +177,45 @@ describe('ToolActionsContext', () => {
     } else {
       throw new Error('Expected onConfirm to be present');
     }
+  });
+
+  it('updates isDiffingEnabled when IdeClient status changes', async () => {
+    let statusListener: () => void = () => {};
+    const mockIdeClient = {
+      isDiffingEnabled: vi.fn().mockReturnValue(false),
+      addStatusChangeListener: vi.fn().mockImplementation((listener) => {
+        statusListener = listener;
+      }),
+      removeStatusChangeListener: vi.fn(),
+    } as unknown as IdeClient;
+
+    vi.mocked(IdeClient.getInstance).mockResolvedValue(mockIdeClient);
+    vi.mocked(mockConfig.getIdeMode).mockReturnValue(true);
+
+    const { result } = renderHook(() => useToolActions(), { wrapper });
+
+    // Wait for initialization
+    await act(async () => {
+      await waitFor(() => expect(IdeClient.getInstance).toHaveBeenCalled());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.isDiffingEnabled).toBe(false);
+
+    // Simulate connection change
+    vi.mocked(mockIdeClient.isDiffingEnabled).mockReturnValue(true);
+    await act(async () => {
+      statusListener();
+    });
+
+    expect(result.current.isDiffingEnabled).toBe(true);
+
+    // Simulate disconnection
+    vi.mocked(mockIdeClient.isDiffingEnabled).mockReturnValue(false);
+    await act(async () => {
+      statusListener();
+    });
+
+    expect(result.current.isDiffingEnabled).toBe(false);
   });
 });

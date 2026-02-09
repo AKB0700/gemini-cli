@@ -213,6 +213,8 @@ describe('Gemini Client (client.ts)', () => {
       getGlobalMemory: vi.fn().mockReturnValue(''),
       getEnvironmentMemory: vi.fn().mockReturnValue(''),
       isJitContextEnabled: vi.fn().mockReturnValue(false),
+      getToolOutputMaskingEnabled: vi.fn().mockReturnValue(false),
+      getDisableLoopDetection: vi.fn().mockReturnValue(false),
 
       getSessionId: vi.fn().mockReturnValue('test-session-id'),
       getProxy: vi.fn().mockReturnValue(undefined),
@@ -226,7 +228,6 @@ describe('Gemini Client (client.ts)', () => {
       getIdeModeFeature: vi.fn().mockReturnValue(false),
       getIdeMode: vi.fn().mockReturnValue(true),
       getDebugMode: vi.fn().mockReturnValue(false),
-      getPreviewFeatures: vi.fn().mockReturnValue(false),
       getWorkspaceContext: vi.fn().mockReturnValue({
         getDirectories: vi.fn().mockReturnValue(['/test/dir']),
       }),
@@ -890,6 +891,7 @@ ${JSON.stringify(
         { model: 'default-routed-model' },
         initialRequest,
         expect.any(AbortSignal),
+        undefined,
       );
     });
 
@@ -1707,6 +1709,7 @@ ${JSON.stringify(
           { model: 'routed-model' },
           [{ text: 'Hi' }],
           expect.any(AbortSignal),
+          undefined,
         );
       });
 
@@ -1724,6 +1727,7 @@ ${JSON.stringify(
           { model: 'routed-model' },
           [{ text: 'Hi' }],
           expect.any(AbortSignal),
+          undefined,
         );
 
         // Second turn
@@ -1741,6 +1745,7 @@ ${JSON.stringify(
           { model: 'routed-model' },
           [{ text: 'Continue' }],
           expect.any(AbortSignal),
+          undefined,
         );
       });
 
@@ -1758,6 +1763,7 @@ ${JSON.stringify(
           { model: 'routed-model' },
           [{ text: 'Hi' }],
           expect.any(AbortSignal),
+          undefined,
         );
 
         // New prompt
@@ -1779,6 +1785,7 @@ ${JSON.stringify(
           { model: 'new-routed-model' },
           [{ text: 'A new topic' }],
           expect.any(AbortSignal),
+          undefined,
         );
       });
 
@@ -1806,6 +1813,7 @@ ${JSON.stringify(
           { model: 'original-model' },
           [{ text: 'Hi' }],
           expect.any(AbortSignal),
+          undefined,
         );
 
         mockRouterService.route.mockResolvedValue({
@@ -1828,6 +1836,7 @@ ${JSON.stringify(
           { model: 'fallback-model' },
           [{ text: 'Continue' }],
           expect.any(AbortSignal),
+          undefined,
         );
       });
     });
@@ -1842,7 +1851,7 @@ ${JSON.stringify(
       const { getCoreSystemPrompt } = await import('./prompts.js');
       const mockGetCoreSystemPrompt = vi.mocked(getCoreSystemPrompt);
 
-      await client.updateSystemInstruction();
+      client.updateSystemInstruction();
 
       expect(mockGetCoreSystemPrompt).toHaveBeenCalledWith(
         mockConfig,
@@ -1857,7 +1866,7 @@ ${JSON.stringify(
       const { getCoreSystemPrompt } = await import('./prompts.js');
       const mockGetCoreSystemPrompt = vi.mocked(getCoreSystemPrompt);
 
-      await client.updateSystemInstruction();
+      client.updateSystemInstruction();
 
       expect(mockGetCoreSystemPrompt).toHaveBeenCalledWith(
         mockConfig,
@@ -1912,6 +1921,7 @@ ${JSON.stringify(
         { model: 'default-routed-model' },
         initialRequest,
         expect.any(AbortSignal),
+        undefined,
       );
 
       // Second call with "Please continue."
@@ -1920,6 +1930,7 @@ ${JSON.stringify(
         { model: 'default-routed-model' },
         [{ text: 'System: Please continue.' }],
         expect.any(AbortSignal),
+        undefined,
       );
     });
 
@@ -2332,6 +2343,7 @@ ${JSON.stringify(
           expect.objectContaining({ model: 'model-a' }),
           expect.anything(),
           expect.anything(),
+          undefined,
         );
       });
 
@@ -3118,6 +3130,7 @@ ${JSON.stringify(
         mockHookSystem.fireAfterAgentEvent.mockResolvedValue({
           shouldStopExecution: () => true,
           getEffectiveReason: () => 'Stopped after agent',
+          shouldClearContext: () => false,
           systemMessage: undefined,
         });
 
@@ -3132,10 +3145,12 @@ ${JSON.stringify(
         );
         const events = await fromAsync(stream);
 
-        expect(events).toContainEqual({
-          type: GeminiEventType.AgentExecutionStopped,
-          value: { reason: 'Stopped after agent' },
-        });
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            type: GeminiEventType.AgentExecutionStopped,
+            value: expect.objectContaining({ reason: 'Stopped after agent' }),
+          }),
+        );
         // sendMessageStream should not recurse
         expect(mockTurnRunFn).toHaveBeenCalledTimes(1);
       });
@@ -3146,11 +3161,61 @@ ${JSON.stringify(
             shouldStopExecution: () => false,
             isBlockingDecision: () => true,
             getEffectiveReason: () => 'Please explain',
+            shouldClearContext: () => false,
             systemMessage: undefined,
           })
           .mockResolvedValueOnce({
             shouldStopExecution: () => false,
             isBlockingDecision: () => false,
+            shouldClearContext: () => false,
+            systemMessage: undefined,
+          });
+
+        mockTurnRunFn.mockImplementation(async function* () {
+          yield { type: GeminiEventType.Content, value: 'Response' };
+        });
+
+        const stream = client.sendMessageStream(
+          { text: 'Hi' },
+          new AbortController().signal,
+          'test-prompt',
+        );
+        const events = await fromAsync(stream);
+
+        expect(events).toContainEqual(
+          expect.objectContaining({
+            type: GeminiEventType.AgentExecutionBlocked,
+            value: expect.objectContaining({ reason: 'Please explain' }),
+          }),
+        );
+        // Should have called turn run twice (original + re-prompt)
+        expect(mockTurnRunFn).toHaveBeenCalledTimes(2);
+        expect(mockTurnRunFn).toHaveBeenNthCalledWith(
+          2,
+          expect.anything(),
+          [{ text: 'Please explain' }],
+          expect.anything(),
+          undefined,
+        );
+      });
+
+      it('should call resetChat when AfterAgent hook returns shouldClearContext: true', async () => {
+        const resetChatSpy = vi
+          .spyOn(client, 'resetChat')
+          .mockResolvedValue(undefined);
+
+        mockHookSystem.fireAfterAgentEvent
+          .mockResolvedValueOnce({
+            shouldStopExecution: () => false,
+            isBlockingDecision: () => true,
+            getEffectiveReason: () => 'Blocked and clearing context',
+            shouldClearContext: () => true,
+            systemMessage: undefined,
+          })
+          .mockResolvedValueOnce({
+            shouldStopExecution: () => false,
+            isBlockingDecision: () => false,
+            shouldClearContext: () => false,
             systemMessage: undefined,
           });
 
@@ -3167,16 +3232,15 @@ ${JSON.stringify(
 
         expect(events).toContainEqual({
           type: GeminiEventType.AgentExecutionBlocked,
-          value: { reason: 'Please explain' },
+          value: {
+            reason: 'Blocked and clearing context',
+            systemMessage: undefined,
+            contextCleared: true,
+          },
         });
-        // Should have called turn run twice (original + re-prompt)
-        expect(mockTurnRunFn).toHaveBeenCalledTimes(2);
-        expect(mockTurnRunFn).toHaveBeenNthCalledWith(
-          2,
-          expect.anything(),
-          [{ text: 'Please explain' }],
-          expect.anything(),
-        );
+        expect(resetChatSpy).toHaveBeenCalledTimes(1);
+
+        resetChatSpy.mockRestore();
       });
     });
   });

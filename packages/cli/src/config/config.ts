@@ -12,11 +12,9 @@ import { extensionsCommand } from '../commands/extensions.js';
 import { skillsCommand } from '../commands/skills.js';
 import { hooksCommand } from '../commands/hooks.js';
 import {
-  Config,
   setGeminiMdFilename as setServerGeminiMdFilename,
   getCurrentGeminiMdFilename,
   ApprovalMode,
-  DEFAULT_GEMINI_MODEL_AUTO,
   DEFAULT_GEMINI_EMBEDDING_MODEL,
   DEFAULT_FILE_FILTERING_OPTIONS,
   DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
@@ -31,12 +29,20 @@ import {
   debugLogger,
   loadServerHierarchicalMemory,
   WEB_FETCH_TOOL_NAME,
+  ASK_USER_TOOL_NAME,
   getVersion,
   PREVIEW_GEMINI_MODEL_AUTO,
-  type HookDefinition,
-  type HookEventName,
-  type OutputFormat,
+  coreEvents,
   GEMINI_MODEL_ALIAS_AUTO,
+  getAdminErrorMessage,
+  Config,
+  applyAdminAllowlist,
+  getAdminBlockedMcpServersMessage,
+} from '@google/gemini-cli-core';
+import type {
+  HookDefinition,
+  HookEventName,
+  OutputFormat,
 } from '@google/gemini-cli-core';
 import {
   type Settings,
@@ -47,7 +53,6 @@ import {
 
 import { loadSandboxConfig } from './sandboxConfig.js';
 import { resolvePath } from '../utils/resolvePath.js';
-import { appEvents } from '../utils/events.js';
 import { RESUME_LATEST } from '../utils/sessionUtils.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
@@ -304,11 +309,11 @@ export async function parseArguments(
     yargsInstance.command(extensionsCommand);
   }
 
-  if (settings.experimental?.skills || (settings.skills?.enabled ?? true)) {
+  if (settings.skills?.enabled ?? true) {
     yargsInstance.command(skillsCommand);
   }
   // Register hooks command if hooks are enabled
-  if (settings.tools?.enableHooks) {
+  if (settings.hooksConfig.enabled) {
     yargsInstance.command(hooksCommand);
   }
 
@@ -432,7 +437,7 @@ export async function loadCliConfig(
   const ideMode = settings.ide?.enabled ?? false;
 
   const folderTrust = settings.security?.folderTrust?.enabled ?? false;
-  const trustedFolder = isWorkspaceTrusted(settings)?.isTrusted ?? false;
+  const trustedFolder = isWorkspaceTrusted(settings, cwd)?.isTrusted ?? false;
 
   // Set the context filename in the server's memoryTool module BEFORE loading memory
   // TODO(b/343434939): This is a bit of a hack. The contextFileName should ideally be passed
@@ -467,7 +472,7 @@ export async function loadCliConfig(
     requestSetting: promptForSetting,
     workspaceDir: cwd,
     enabledExtensionOverrides: argv.extensions,
-    eventEmitter: appEvents as EventEmitter<ExtensionEvents>,
+    eventEmitter: coreEvents as EventEmitter<ExtensionEvents>,
     clientVersion: await getVersion(),
   });
   await extensionManager.loadExtensions();
@@ -502,9 +507,15 @@ export async function loadCliConfig(
 
   // Determine approval mode with backward compatibility
   let approvalMode: ApprovalMode;
-  if (argv.approvalMode) {
-    // New --approval-mode flag takes precedence
-    switch (argv.approvalMode) {
+  const rawApprovalMode =
+    argv.approvalMode ||
+    (argv.yolo ? 'yolo' : undefined) ||
+    ((settings.tools?.approvalMode as string) !== 'yolo'
+      ? settings.tools.approvalMode
+      : undefined);
+
+  if (rawApprovalMode) {
+    switch (rawApprovalMode) {
       case 'yolo':
         approvalMode = ApprovalMode.YOLO;
         break;
@@ -524,13 +535,11 @@ export async function loadCliConfig(
         break;
       default:
         throw new Error(
-          `Invalid approval mode: ${argv.approvalMode}. Valid values are: yolo, auto_edit, plan, default`,
+          `Invalid approval mode: ${rawApprovalMode}. Valid values are: yolo, auto_edit, plan, default`,
         );
     }
   } else {
-    // Fallback to legacy --yolo flag behavior
-    approvalMode =
-      argv.yolo || false ? ApprovalMode.YOLO : ApprovalMode.DEFAULT;
+    approvalMode = ApprovalMode.DEFAULT;
   }
 
   // Override approval mode if disableYoloMode is set.
@@ -546,7 +555,7 @@ export async function loadCliConfig(
         );
       }
       throw new FatalConfigError(
-        'Cannot start in YOLO mode since it is disabled by your admin',
+        getAdminErrorMessage('YOLO mode', undefined /* config */),
       );
     }
   } else if (approvalMode === ApprovalMode.YOLO) {
@@ -591,6 +600,10 @@ export async function loadCliConfig(
   // In non-interactive mode, exclude tools that require a prompt.
   const extraExcludes: string[] = [];
   if (!interactive) {
+    // ask_user requires user interaction and must be excluded in all
+    // non-interactive modes, regardless of the approval mode.
+    extraExcludes.push(ASK_USER_TOOL_NAME);
+
     const defaultExcludes = [
       SHELL_TOOL_NAME,
       EDIT_TOOL_NAME,
@@ -649,9 +662,7 @@ export async function loadCliConfig(
   );
   policyEngineConfig.nonInteractive = !interactive;
 
-  const defaultModel = settings.general?.previewFeatures
-    ? PREVIEW_GEMINI_MODEL_AUTO
-    : DEFAULT_GEMINI_MODEL_AUTO;
+  const defaultModel = PREVIEW_GEMINI_MODEL_AUTO;
   const specifiedModel =
     argv.model || process.env['GEMINI_MODEL'] || settings.model?.name;
 
@@ -677,6 +688,24 @@ export async function loadCliConfig(
     ? mcpEnablementManager.getEnablementCallbacks()
     : undefined;
 
+  const adminAllowlist = settings.admin?.mcp?.config;
+  let mcpServerCommand = mcpEnabled ? settings.mcp?.serverCommand : undefined;
+  let mcpServers = mcpEnabled ? settings.mcpServers : {};
+
+  if (mcpEnabled && adminAllowlist && Object.keys(adminAllowlist).length > 0) {
+    const result = applyAdminAllowlist(mcpServers, adminAllowlist);
+    mcpServers = result.mcpServers;
+    mcpServerCommand = undefined;
+
+    if (result.blockedServerNames && result.blockedServerNames.length > 0) {
+      const message = getAdminBlockedMcpServersMessage(
+        result.blockedServerNames,
+        undefined,
+      );
+      coreEvents.emitConsoleLog('warn', message);
+    }
+  }
+
   return new Config({
     sessionId,
     clientVersion: await getVersion(),
@@ -688,7 +717,6 @@ export async function loadCliConfig(
       settings.context?.loadMemoryFromIncludeDirectories || false,
     debugMode,
     question,
-    previewFeatures: settings.general?.previewFeatures,
 
     coreTools: settings.tools?.core || undefined,
     allowedTools: allowedTools.length > 0 ? allowedTools : undefined,
@@ -696,8 +724,8 @@ export async function loadCliConfig(
     excludeTools,
     toolDiscoveryCommand: settings.tools?.discoveryCommand,
     toolCallCommand: settings.tools?.callCommand,
-    mcpServerCommand: mcpEnabled ? settings.mcp?.serverCommand : undefined,
-    mcpServers: mcpEnabled ? settings.mcpServers : {},
+    mcpServerCommand,
+    mcpServers,
     mcpEnablementCallbacks,
     mcpEnabled,
     extensionsEnabled,
@@ -749,19 +777,20 @@ export async function loadCliConfig(
     enableExtensionReloading: settings.experimental?.extensionReloading,
     enableAgents: settings.experimental?.enableAgents,
     plan: settings.experimental?.plan,
-    enableEventDrivenScheduler:
-      settings.experimental?.enableEventDrivenScheduler,
-    skillsSupport:
-      settings.experimental?.skills || (settings.skills?.enabled ?? true),
+    enableEventDrivenScheduler: true,
+    skillsSupport: settings.skills?.enabled ?? true,
     disabledSkills: settings.skills?.disabled,
     experimentalJitContext: settings.experimental?.jitContext,
+    toolOutputMasking: settings.experimental?.toolOutputMasking,
     noBrowser: !!process.env['NO_BROWSER'],
     summarizeToolOutput: settings.model?.summarizeToolOutput,
     ideMode,
+    disableLoopDetection: settings.model?.disableLoopDetection,
     compressionThreshold: settings.model?.compressionThreshold,
     folderTrust,
     interactive,
     trustedFolder,
+    useBackgroundColor: settings.ui?.useBackgroundColor,
     useRipgrep: settings.tools?.useRipgrep,
     enableInteractiveShell: settings.tools?.shell?.enableInteractiveShell,
     shellToolInactivityTimeout: settings.tools?.shell?.inactivityTimeout,
@@ -770,9 +799,7 @@ export async function loadCliConfig(
     skipNextSpeakerCheck: settings.model?.skipNextSpeakerCheck,
     enablePromptCompletion: settings.general?.enablePromptCompletion,
     truncateToolOutputThreshold: settings.tools?.truncateToolOutputThreshold,
-    truncateToolOutputLines: settings.tools?.truncateToolOutputLines,
-    enableToolOutputTruncation: settings.tools?.enableToolOutputTruncation,
-    eventEmitter: appEvents,
+    eventEmitter: coreEvents,
     useWriteTodos: argv.useWriteTodos ?? settings.useWriteTodos,
     output: {
       format: (argv.outputFormat ?? settings.output?.format) as OutputFormat,
@@ -786,10 +813,8 @@ export async function loadCliConfig(
     acceptRawOutputRisk: argv.acceptRawOutputRisk,
     modelConfigServiceConfig: settings.modelConfigs,
     // TODO: loading of hooks based on workspace trust
-    enableHooks:
-      (settings.tools?.enableHooks ?? true) &&
-      (settings.hooksConfig?.enabled ?? true),
-    enableHooksUI: settings.tools?.enableHooks ?? true,
+    enableHooks: settings.hooksConfig.enabled,
+    enableHooksUI: settings.hooksConfig.enabled,
     hooks: settings.hooks || {},
     disabledHooks: settings.hooksConfig?.disabled || [],
     projectHooks: projectHooks || {},

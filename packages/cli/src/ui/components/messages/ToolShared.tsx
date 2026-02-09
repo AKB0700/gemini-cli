@@ -18,9 +18,12 @@ import { theme } from '../../semantic-colors.js';
 import {
   type Config,
   SHELL_TOOL_NAME,
+  ASK_USER_DISPLAY_NAME,
   type ToolResultDisplay,
 } from '@google/gemini-cli-core';
 import { useInactivityTimer } from '../../hooks/useInactivityTimer.js';
+import { formatCommand } from '../../utils/keybindingUtils.js';
+import { Command } from '../../../config/keyBindings.js';
 
 export const STATUS_INDICATOR_WIDTH = 3;
 
@@ -116,7 +119,9 @@ export const FocusHint: React.FC<{
   return (
     <Box marginLeft={1} flexShrink={0}>
       <Text color={theme.text.accent}>
-        {isThisShellFocused ? '(Focused)' : '(tab to focus)'}
+        {isThisShellFocused
+          ? `(${formatCommand(Command.UNFOCUS_SHELL_INPUT)} to unfocus)`
+          : `(${formatCommand(Command.FOCUS_SHELL_INPUT)} to focus)`}
       </Text>
     </Box>
   );
@@ -198,13 +203,28 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
       }
     }
   }, [emphasis]);
+
+  // Hide description for completed Ask User tools (the result display speaks for itself)
+  const isCompletedAskUser =
+    name === ASK_USER_DISPLAY_NAME &&
+    [
+      ToolCallStatus.Success,
+      ToolCallStatus.Error,
+      ToolCallStatus.Canceled,
+    ].includes(status);
+
   return (
     <Box overflow="hidden" height={1} flexGrow={1} flexShrink={1}>
       <Text strikethrough={status === ToolCallStatus.Canceled} wrap="truncate">
         <Text color={nameColor} bold>
           {name}
-        </Text>{' '}
-        <Text color={theme.text.secondary}>{description}</Text>
+        </Text>
+        {!isCompletedAskUser && (
+          <>
+            {' '}
+            <Text color={theme.text.secondary}>{description}</Text>
+          </>
+        )}
       </Text>
     </Box>
   );
