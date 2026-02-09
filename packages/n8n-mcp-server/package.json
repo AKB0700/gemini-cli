@@ -1,0 +1,20 @@
+{
+  "name": "@google/gemini-cli-n8n-mcp-server",
+  "version": "0.1.0",
+  "description": "n8n MCP Server for Gemini CLI - Connect n8n workflow automation with Google AI",
+  "type": "module",
+  "main": "index.js",
+  "keywords": [
+    "n8n",
+    "mcp",
+    "gemini",
+    "workflow",
+    "automation"
+  ],
+  "author": "Google LLC",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.23.0",
+    "zod": "^3.22.4"
+  }
+}

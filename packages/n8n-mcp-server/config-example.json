@@ -1,0 +1,34 @@
+{
+  "name": "n8n-mcp-server-config-example",
+  "description": "Example configuration for n8n MCP server in Gemini CLI settings.json",
+  "example_settings": {
+    "mcpServers": {
+      "n8n": {
+        "command": "node",
+        "args": ["${path-to-gemini-cli}/packages/n8n-mcp-server/index.js"],
+        "env": {
+          "N8N_API_URL": "http://localhost:5678",
+          "N8N_API_KEY": "your-n8n-api-key-here"
+        },
+        "alwaysAllow": [
+          "n8n_list_workflows",
+          "n8n_get_workflow",
+          "n8n_get_executions"
+        ],
+        "alwaysConfirm": ["n8n_execute_workflow", "n8n_activate_workflow"]
+      }
+    }
+  },
+  "cloud_example": {
+    "mcpServers": {
+      "n8n": {
+        "command": "node",
+        "args": ["${path-to-gemini-cli}/packages/n8n-mcp-server/index.js"],
+        "env": {
+          "N8N_API_URL": "https://your-instance.n8n.cloud",
+          "N8N_API_KEY": "your-cloud-api-key"
+        }
+      }
+    }
+  }
+}

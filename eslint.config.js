@@ -38,6 +38,7 @@ export default tseslint.config(
       'evals/**',
       'packages/test-utils/**',
       'packages/core/src/skills/builtin/skill-creator/scripts/*.cjs',
+      'packages/n8n-mcp-server/**', // n8n MCP server is a standalone package
     ],
   },
   eslint.configs.recommended,
