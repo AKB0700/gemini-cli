@@ -20,11 +20,11 @@ your `settings.json`:
 }
 ```
 
-- **[Writing hooks guide](/docs/hooks/writing-hooks)**: A tutorial on creating
+- **[Writing hooks guide](writing-hooks)**: A tutorial on creating
   your first hook with comprehensive examples.
-- **[Hooks reference](/docs/hooks/reference)**: The definitive technical
+- **[Hooks reference](reference)**: The definitive technical
   specification of I/O schemas and exit codes.
-- **[Best practices](/docs/hooks/best-practices)**: Guidelines on security,
+- **[Best practices](best-practices)**: Guidelines on security,
   performance, and debugging.
 
 ## What are hooks?
@@ -156,7 +156,7 @@ Gemini CLI **fingerprints** project hooks. If a hook's name or command changes
 (e.g., via `git pull`), it is treated as a **new, untrusted hook** and you will
 be warned before it executes.
 
-See [Security Considerations](/docs/hooks/best-practices#using-hooks-securely)
+See [Security Considerations](best-practices#using-hooks-securely)
 for a detailed threat model.
 
 ## Managing hooks
