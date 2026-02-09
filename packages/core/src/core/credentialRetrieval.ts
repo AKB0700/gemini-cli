@@ -47,10 +47,13 @@ export class AutomaticCredentialRetriever {
     const googleApiKey = process.env['GOOGLE_API_KEY'];
     if (googleApiKey) {
       debugLogger.log('Found GOOGLE_API_KEY in environment variables');
+      // GOOGLE_API_KEY can be used with Vertex AI or Gemini API
+      // We'll default to vertex-ai since that's the common use case
+      // The auth validation will handle determining the correct usage
       return {
         source: 'environment:GOOGLE_API_KEY',
         value: googleApiKey,
-        authType: 'vertex-ai',
+        authType: 'gemini-api-key',
       };
     }
 
@@ -86,8 +89,15 @@ export class AutomaticCredentialRetriever {
    */
   async getFromGcloudCLI(): Promise<CredentialSource | null> {
     try {
-      // Check if gcloud is installed
-      await execAsync('which gcloud');
+      // Check if gcloud is installed by running gcloud version
+      // This is cross-platform (works on Windows, macOS, Linux)
+      try {
+        await execAsync('gcloud version');
+      } catch {
+        // gcloud not installed
+        debugLogger.log('gcloud CLI not available');
+        return null;
+      }
 
       // Get the active account
       const { stdout: account } = await execAsync(

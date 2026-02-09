@@ -129,7 +129,7 @@ describe('AutomaticCredentialRetriever', () => {
             result: { stdout: string; stderr: string },
           ) => void;
           if (command === 'which gcloud') {
-            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: 'Google Cloud SDK 400.0.0', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
             cb?.(null, { stdout: 'user@example.com\n', stderr: '' });
           } else if (command.includes('gcloud auth print-access-token')) {
@@ -173,7 +173,7 @@ describe('AutomaticCredentialRetriever', () => {
             result: { stdout: string; stderr: string },
           ) => void;
           if (command === 'which gcloud') {
-            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: 'Google Cloud SDK 400.0.0', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
             cb?.(null, { stdout: '', stderr: '' });
           }
@@ -301,7 +301,7 @@ describe('AutomaticCredentialRetriever', () => {
             result: { stdout: string; stderr: string },
           ) => void;
           if (command === 'which gcloud') {
-            cb?.(null, { stdout: '/usr/bin/gcloud', stderr: '' });
+            cb?.(null, { stdout: 'Google Cloud SDK 400.0.0', stderr: '' });
           } else if (command.includes('gcloud config get-value account')) {
             cb?.(null, { stdout: 'user@example.com\n', stderr: '' });
           } else if (command.includes('gcloud auth print-access-token')) {

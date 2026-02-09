@@ -77,16 +77,18 @@ export async function validateNonInteractiveAuth(
     }
 
     if (!effectiveAuthType) {
-      const message =
-        `No authentication credentials found. Please:\n` +
-        `1. Set GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, or GOOGLE_GENAI_USE_GCA environment variable, OR\n` +
-        `2. Configure auth method in ${USER_SETTINGS_PATH}, OR\n` +
-        `3. Authenticate with 'gcloud auth login' (credentials will be auto-detected)\n\n` +
-        `Automatic credential detection checked:\n` +
-        `- Environment variables (GEMINI_API_KEY, GOOGLE_API_KEY)\n` +
-        `- Stored credentials (keychain/file)\n` +
-        `- Google Cloud SDK (gcloud CLI)\n` +
-        `- Application Default Credentials (ADC)`;
+      const message = [
+        'No authentication credentials found. Please:',
+        '1. Set GEMINI_API_KEY, GOOGLE_GENAI_USE_VERTEXAI, or GOOGLE_GENAI_USE_GCA environment variable, OR',
+        `2. Configure auth method in ${USER_SETTINGS_PATH}, OR`,
+        "3. Authenticate with 'gcloud auth login' (credentials will be auto-detected)",
+        '',
+        'Automatic credential detection checked:',
+        '- Environment variables (GEMINI_API_KEY, GOOGLE_API_KEY)',
+        '- Stored credentials (keychain/file)',
+        '- Google Cloud SDK (gcloud CLI)',
+        '- Application Default Credentials (ADC)',
+      ].join('\n');
       throw new Error(message);
     }
 
