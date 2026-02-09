@@ -91,6 +91,8 @@ Additionally, these tools incorporate:
 
 - **[MCP servers](./mcp-server.md)**: MCP servers act as a bridge between the
   Gemini model and your local environment or other services like APIs.
+  - **[n8n Integration](./n8n-integration.md)**: Connect Gemini CLI to n8n
+    workflow automation platform for AI-driven automation management.
 - **[Agent Skills](../cli/skills.md)**: On-demand expertise packages that are
   activated via the `activate_skill` tool to provide specialized guidance and
   resources.

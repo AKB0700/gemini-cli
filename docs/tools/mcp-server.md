@@ -453,6 +453,44 @@ then be used to authenticate with the MCP server.
 }
 ```
 
+#### n8n workflow automation server
+
+Connect to [n8n](https://n8n.io/) to automate workflows with Gemini CLI. The n8n
+MCP server is included in the Gemini CLI repository at
+`packages/n8n-mcp-server`.
+
+```json
+{
+  "mcpServers": {
+    "n8n": {
+      "command": "node",
+      "args": ["packages/n8n-mcp-server/index.js"],
+      "env": {
+        "N8N_API_URL": "http://localhost:5678",
+        "N8N_API_KEY": "$N8N_API_KEY"
+      },
+      "alwaysAllow": [
+        "n8n_list_workflows",
+        "n8n_get_workflow",
+        "n8n_get_executions"
+      ],
+      "alwaysConfirm": ["n8n_execute_workflow", "n8n_activate_workflow"]
+    }
+  }
+}
+```
+
+Available tools:
+
+- `n8n_list_workflows`: List all workflows
+- `n8n_get_workflow`: Get workflow details
+- `n8n_execute_workflow`: Execute a workflow with input data
+- `n8n_get_executions`: View execution history
+- `n8n_activate_workflow`: Activate or deactivate workflows
+
+See the [n8n MCP server README](../../packages/n8n-mcp-server/README.md) for
+detailed setup instructions.
+
 ### SSE MCP server with SA impersonation
 
 ```json
