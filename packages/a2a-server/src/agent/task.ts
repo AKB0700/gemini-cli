@@ -411,18 +411,10 @@ export class Task {
       );
       toolCalls.forEach((tc: ToolCall) => {
         if (tc.status === 'awaiting_approval' && tc.confirmationDetails) {
-          const confirmPromise = (
-            tc.confirmationDetails as ToolCallConfirmationDetails
-          ).onConfirm(ToolConfirmationOutcome.ProceedOnce);
-          // Handle the promise if onConfirm returns one
-          if (confirmPromise && typeof confirmPromise.catch === 'function') {
-            void confirmPromise.catch((error) => {
-              logger.error(
-                `[Task] Error during auto-approval of tool ${tc.request.callId}:`,
-                error,
-              );
-            });
-          }
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          (tc.confirmationDetails as ToolCallConfirmationDetails).onConfirm(
+            ToolConfirmationOutcome.ProceedOnce,
+          );
           this.pendingToolConfirmationDetails.delete(tc.request.callId);
         }
       });
@@ -445,6 +437,8 @@ export class Task {
       !isExecuting &&
       !this.skipFinalTrueAfterInlineEdit
     ) {
+      this.skipFinalTrueAfterInlineEdit = false;
+
       // We don't need to send another message, just a final status update.
       this.setTaskStateAndPublishUpdate(
         'input-required',
@@ -896,14 +890,11 @@ export class Task {
       } else {
         parts = [response];
       }
-      void this.geminiClient
-        .addHistory({
-          role: 'user',
-          parts,
-        })
-        .catch((error) => {
-          logger.error('[Task] Error adding tool response to history:', error);
-        });
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.geminiClient.addHistory({
+        role: 'user',
+        parts,
+      });
     }
   }
 
