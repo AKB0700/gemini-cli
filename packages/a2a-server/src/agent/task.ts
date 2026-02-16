@@ -890,11 +890,17 @@ export class Task {
       } else {
         parts = [response];
       }
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.geminiClient.addHistory({
-        role: 'user',
-        parts,
-      });
+      void this.geminiClient
+        .addHistory({
+          role: 'user',
+          parts,
+        })
+        .catch((error) => {
+          logger.error(
+            '[Task] Failed to add tool response to history.',
+            error,
+          );
+        });
     }
   }
 
