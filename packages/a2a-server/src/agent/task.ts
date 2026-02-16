@@ -412,14 +412,14 @@ export class Task {
       toolCalls.forEach((tc: ToolCall) => {
         if (tc.status === 'awaiting_approval' && tc.confirmationDetails) {
           const details = tc.confirmationDetails as ToolCallConfirmationDetails;
-          void details
-            .onConfirm(ToolConfirmationOutcome.ProceedOnce)
-            .catch((error) => {
-              logger.error(
-                '[Task] Auto-approving tool call failed in onConfirm',
-                error,
-              );
-            });
+          void Promise.resolve(
+            details.onConfirm(ToolConfirmationOutcome.ProceedOnce),
+          ).catch((error) => {
+            logger.error(
+              '[Task] Auto-approving tool call failed in onConfirm',
+              error,
+            );
+          });
           this.pendingToolConfirmationDetails.delete(tc.request.callId);
         }
       });
