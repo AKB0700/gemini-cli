@@ -207,8 +207,7 @@ jobs:
         if: "${{runner.os == 'macOS'}}"
         run: |
           npm cache clean --force
-      - name: 'Run E2E tests (non-Windows)'
-        if: "${{runner.os != 'Windows'}}"
+      - name: 'Run E2E tests'
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           KEEP_OUTPUT: 'true'
