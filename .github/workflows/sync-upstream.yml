@@ -190,13 +190,14 @@ jobs:
 
             ### Action Required
 
-            The merged changes are **not yet pushed** to the fork. Please investigate and fix the failing tests:
+            The merge occurred in the workflow but was **not pushed** to the fork. You need to redo the merge locally and fix the issues:
 
-            1. **Pull the latest changes:**
+            1. **Fetch and merge upstream changes locally:**
                \`\`\`bash
-               git fetch origin
+               git remote add upstream https://github.com/google-gemini/gemini-cli.git || true
+               git fetch upstream
                git checkout main
-               git pull origin main
+               git merge upstream/main
                \`\`\`
 
             2. **Run preflight checks locally:**
@@ -221,13 +222,28 @@ jobs:
             ---
             *This issue was automatically created by the [sync-upstream workflow](https://github.com/${{ github.repository }}/blob/main/.github/workflows/sync-upstream.yml).*`;
 
-            await github.rest.issues.create({
+            // Check if an issue already exists
+            const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['upstream-sync', 'bug', 'tests']
+              state: 'open',
+              labels: 'upstream-sync'
             });
+
+            const existingIssue = issues.data.find(issue => issue.title === title);
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['upstream-sync', 'bug', 'tests']
+              });
+              console.log('Created new issue for preflight failure');
+            } else {
+              console.log('Issue already exists, skipping creation');
+            }
 
       - name: 'Summary'
         if: 'always()'
