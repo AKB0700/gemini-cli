@@ -160,6 +160,22 @@ with a value of `GEMINI_API_KEY` and set that to a valid API key that you have
 available. Your key and secret are private to your repo; no one without access
 can see your key and you cannot see any secrets related to this repo.
 
+**Important:** If you don't configure the `GEMINI_API_KEY` secret, the E2E
+(End-to-End) and integration test jobs in GitHub Actions workflows will be
+automatically skipped with a clear message. This is expected behavior for forks
+and will not cause workflow failures. You can still contribute code changes, and
+the build and unit tests will continue to run normally.
+
+To set up the `GEMINI_API_KEY` secret:
+
+1. Go to your forked repository on GitHub
+2. Click on **Settings** → **Secrets and variables** → **Actions**
+3. Click **New repository secret**
+4. Name: `GEMINI_API_KEY`
+5. Value: Your Gemini API key (get one from
+   [Google AI Studio](https://aistudio.google.com/app/apikey))
+6. Click **Add secret**
+
 Additionally you will need to click on the `Actions` tab and enable workflows
 for your repository, you'll find it's the large blue button in the center of the
 screen.
