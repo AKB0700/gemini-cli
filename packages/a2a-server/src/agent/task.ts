@@ -411,18 +411,10 @@ export class Task {
       );
       toolCalls.forEach((tc: ToolCall) => {
         if (tc.status === 'awaiting_approval' && tc.confirmationDetails) {
-          const confirmPromise = (
-            tc.confirmationDetails as ToolCallConfirmationDetails
-          ).onConfirm(ToolConfirmationOutcome.ProceedOnce);
-          // Handle the promise if onConfirm returns one
-          if (confirmPromise && typeof confirmPromise.catch === 'function') {
-            void confirmPromise.catch((error) => {
-              logger.error(
-                `[Task] Error during auto-approval of tool ${tc.request.callId}:`,
-                error,
-              );
-            });
-          }
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          (tc.confirmationDetails as ToolCallConfirmationDetails).onConfirm(
+            ToolConfirmationOutcome.ProceedOnce,
+          );
           this.pendingToolConfirmationDetails.delete(tc.request.callId);
         }
       });
@@ -902,7 +894,10 @@ export class Task {
           parts,
         })
         .catch((error) => {
-          logger.error('[Task] Error adding tool response to history:', error);
+          logger.error(
+            '[Task] Failed to add tool response to history.',
+            error,
+          );
         });
     }
   }
