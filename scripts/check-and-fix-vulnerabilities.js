@@ -31,38 +31,50 @@ import { execSync } from 'node:child_process';
  *   --force  Use npm audit fix --force for breaking changes (use with caution)
  */
 
-const args = process.argv.slice(2);
-const shouldFix = args.includes('--fix');
-const useForce = args.includes('--force');
-
-console.log('🔍 Checking for security vulnerabilities...\n');
-
-try {
-  // Run npm audit and capture output
-  const auditResult = execSync('npm audit --json', {
-    encoding: 'utf-8',
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-
-  const audit = JSON.parse(auditResult);
-  const vulnerabilities = audit.metadata?.vulnerabilities || {};
-  const total =
+/**
+ * Calculate total number of vulnerabilities
+ * @param {Object} vulnerabilities - Vulnerabilities object from npm audit
+ * @returns {number} Total number of vulnerabilities
+ */
+function countVulnerabilities(vulnerabilities) {
+  return (
     (vulnerabilities.low || 0) +
     (vulnerabilities.moderate || 0) +
     (vulnerabilities.high || 0) +
-    (vulnerabilities.critical || 0);
+    (vulnerabilities.critical || 0)
+  );
+}
 
-  if (total === 0) {
-    console.log('✅ No vulnerabilities found!');
-    process.exit(0);
-  }
-
+/**
+ * Report vulnerabilities summary
+ * @param {number} total - Total number of vulnerabilities
+ * @param {Object} vulnerabilities - Vulnerabilities object from npm audit
+ */
+function reportVulnerabilities(total, vulnerabilities) {
   console.log(`⚠️  Found ${total} vulnerabilities:`);
   console.log(`   - Critical: ${vulnerabilities.critical || 0}`);
   console.log(`   - High: ${vulnerabilities.high || 0}`);
   console.log(`   - Moderate: ${vulnerabilities.moderate || 0}`);
   console.log(`   - Low: ${vulnerabilities.low || 0}`);
   console.log();
+}
+
+/**
+ * Handle vulnerability check and optionally fix
+ * @param {Object} audit - Audit result object
+ * @param {boolean} shouldFix - Whether to attempt fixing
+ * @param {boolean} useForce - Whether to use --force flag
+ */
+function handleVulnerabilities(audit, shouldFix, useForce) {
+  const vulnerabilities = audit.metadata?.vulnerabilities || {};
+  const total = countVulnerabilities(vulnerabilities);
+
+  if (total === 0) {
+    console.log('✅ No vulnerabilities found!');
+    process.exit(0);
+  }
+
+  reportVulnerabilities(total, vulnerabilities);
 
   if (shouldFix) {
     console.log('🔧 Attempting to fix vulnerabilities...\n');
@@ -81,11 +93,7 @@ try {
       });
       const reaudit = JSON.parse(reauditResult);
       const remainingVulns = reaudit.metadata?.vulnerabilities || {};
-      const remainingTotal =
-        (remainingVulns.low || 0) +
-        (remainingVulns.moderate || 0) +
-        (remainingVulns.high || 0) +
-        (remainingVulns.critical || 0);
+      const remainingTotal = countVulnerabilities(remainingVulns);
 
       if (remainingTotal > 0) {
         console.log(`\n⚠️  ${remainingTotal} vulnerabilities still remain.`);
@@ -105,58 +113,33 @@ try {
     console.log(
       '💡 Run with --fix to automatically fix these vulnerabilities.',
     );
-    console.log('   Example: npm run check-vulnerabilities -- --fix');
+    console.log('   Example: npm run check:vulnerabilities -- --fix');
     process.exit(1);
   }
+}
+
+const args = process.argv.slice(2);
+const shouldFix = args.includes('--fix');
+const useForce = args.includes('--force');
+
+console.log('🔍 Checking for security vulnerabilities...\n');
+
+try {
+  // Run npm audit and capture output
+  const auditResult = execSync('npm audit --json', {
+    encoding: 'utf-8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  const audit = JSON.parse(auditResult);
+  handleVulnerabilities(audit, shouldFix, useForce);
 } catch (error) {
   // npm audit returns non-zero exit code when vulnerabilities exist
   // Try to parse the error output as JSON
   if (error.stdout) {
     try {
       const audit = JSON.parse(error.stdout);
-      const vulnerabilities = audit.metadata?.vulnerabilities || {};
-      const total =
-        (vulnerabilities.low || 0) +
-        (vulnerabilities.moderate || 0) +
-        (vulnerabilities.high || 0) +
-        (vulnerabilities.critical || 0);
-
-      if (total === 0) {
-        console.log('✅ No vulnerabilities found!');
-        process.exit(0);
-      }
-
-      console.log(`⚠️  Found ${total} vulnerabilities:`);
-      console.log(`   - Critical: ${vulnerabilities.critical || 0}`);
-      console.log(`   - High: ${vulnerabilities.high || 0}`);
-      console.log(`   - Moderate: ${vulnerabilities.moderate || 0}`);
-      console.log(`   - Low: ${vulnerabilities.low || 0}`);
-      console.log();
-
-      if (shouldFix) {
-        console.log('🔧 Attempting to fix vulnerabilities...\n');
-
-        const fixCommand = useForce ? 'npm audit fix --force' : 'npm audit fix';
-
-        try {
-          execSync(fixCommand, { stdio: 'inherit' });
-          console.log('\n✅ Vulnerabilities fixed successfully!');
-          console.log('   Please run tests to ensure nothing broke.');
-          process.exit(0);
-        } catch (fixError) {
-          console.error(
-            '\n❌ Failed to fix vulnerabilities:',
-            fixError.message,
-          );
-          process.exit(1);
-        }
-      } else {
-        console.log(
-          '💡 Run with --fix to automatically fix these vulnerabilities.',
-        );
-        console.log('   Example: npm run check-vulnerabilities -- --fix');
-        process.exit(1);
-      }
+      handleVulnerabilities(audit, shouldFix, useForce);
     } catch {
       console.error('❌ Error parsing audit results:', error);
       process.exit(1);
