@@ -1,5 +1,17 @@
 # How to contribute
 
+> **Note**: This is a fork of
+> [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli).
+>
+> - For contributions to **this fork**, please follow the process below and
+>   submit PRs to this repository.
+> - For contributions to the **upstream project**, please refer to the
+>   [upstream CONTRIBUTING guide](https://github.com/google-gemini/gemini-cli/blob/main/CONTRIBUTING.md)
+>   and submit PRs there.
+>
+> See [FORK_NOTES.md](./FORK_NOTES.md) for more information about this fork's
+> relationship to the upstream project.
+
 We would love to accept your patches and contributions to this project. This
 document includes:
 
