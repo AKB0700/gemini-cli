@@ -18,6 +18,10 @@ jobs:
   sync-upstream:
     runs-on: 'ubuntu-latest'
 
+    permissions:
+      contents: 'write'  # Required for git push
+      issues: 'write'    # Required for creating issues
+
     steps:
       - name: 'Checkout fork'
         uses: 'actions/checkout@v4'
