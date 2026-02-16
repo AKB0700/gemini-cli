@@ -60,6 +60,8 @@
     "release:version": "node scripts/version.js",
     "telemetry": "node scripts/telemetry.js",
     "check:lockfile": "node scripts/check-lockfile.js",
+    "check:vulnerabilities": "node scripts/check-and-fix-vulnerabilities.js",
+    "fix:vulnerabilities": "node scripts/check-and-fix-vulnerabilities.js --fix",
     "clean": "node scripts/clean.js",
     "pre-commit": "node scripts/pre-commit.js"
   },
