@@ -33,6 +33,9 @@ upstream:
   4. Pushes merged changes if all checks pass
   5. Creates an issue if conflicts are detected
 
+For a complete quick reference guide, see
+[Fork Sync Automation Guide](./docs/fork-sync-automation.md).
+
 **Manual trigger:** You can also trigger the sync manually:
 
 1. Go to **Actions** → **Sync with Upstream**
