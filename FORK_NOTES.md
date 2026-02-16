@@ -19,7 +19,30 @@ upstream improvements.
 
 ## Keeping in Sync with Upstream
 
-### Adding Upstream Remote
+### Automated Sync (Recommended)
+
+This fork uses a **GitHub Actions workflow** to automatically sync with upstream:
+
+- **Schedule:** Runs weekly on Mondays at 2:00 UTC
+- **Workflow:** `.github/workflows/sync-upstream.yml`
+- **What it does:**
+  1. Fetches latest changes from upstream
+  2. Attempts to merge into main branch
+  3. Runs full preflight checks (build, lint, tests)
+  4. Pushes merged changes if all checks pass
+  5. Creates an issue if conflicts are detected
+
+**Manual trigger:** You can also trigger the sync manually:
+
+1. Go to **Actions** → **Sync with Upstream**
+2. Click **Run workflow**
+3. Choose dry-run mode (optional) to test without pushing
+
+### Manual Sync (When Needed)
+
+If the automated sync fails due to conflicts, follow these manual steps:
+
+#### Adding Upstream Remote
 
 If not already configured, add the upstream repository:
 
@@ -28,7 +51,7 @@ git remote add upstream https://github.com/google-gemini/gemini-cli.git
 git fetch upstream
 ```
 
-### Syncing with Upstream
+#### Syncing with Upstream
 
 To sync with the latest upstream changes:
 
@@ -124,11 +147,18 @@ If you develop a feature in this fork that would benefit the upstream project:
 
 ## Maintenance Checklist
 
-- [ ] Regularly sync with upstream (recommended: weekly or bi-weekly)
-- [ ] Keep dependencies up to date
+### Automated Tasks ✅
+
+- [x] **Regularly sync with upstream** - Automated via GitHub Actions (weekly)
+- [x] **Run preflight checks after sync** - Automated in sync workflow
+- [x] **Create issues on sync failures** - Automated notifications
+
+### Manual Tasks
+
+- [ ] Keep dependencies up to date (consider enabling Dependabot)
 - [ ] Monitor upstream releases for breaking changes
 - [ ] Update fork-specific documentation when changes are made
-- [ ] Review and test upstream changes before merging
+- [ ] Review automated sync PRs/issues when conflicts occur
 
 ## Resources
 
