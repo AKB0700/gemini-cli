@@ -1,0 +1,261 @@
+name: 'Sync with Upstream'
+
+on:
+  # Run weekly on Mondays at 2:00 UTC
+  schedule:
+    - cron: '0 2 * * 1'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no push)'
+        required: false
+        default: 'false'
+        type: 'boolean'
+
+jobs:
+  sync-upstream:
+    runs-on: 'ubuntu-latest'
+
+    permissions:
+      contents: 'write'  # Required for git push
+      issues: 'write'    # Required for creating issues
+
+    steps:
+      - name: 'Checkout fork'
+        uses: 'actions/checkout@v4'
+        with:
+          ref: 'main'
+          fetch-depth: 0
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Configure Git'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 'Add upstream remote'
+        run: |
+          git remote add upstream https://github.com/google-gemini/gemini-cli.git || true
+          git remote -v
+
+      - name: 'Fetch upstream changes'
+        run: |
+          git fetch upstream
+          echo "Latest upstream commit: $(git rev-parse upstream/main)"
+          echo "Current fork commit: $(git rev-parse main)"
+
+      - name: 'Check for updates'
+        id: 'check_updates'
+        run: |
+          BEHIND=$(git rev-list --count main..upstream/main)
+          echo "commits_behind=$BEHIND" >> $GITHUB_OUTPUT
+          echo "Fork is $BEHIND commits behind upstream"
+
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "✅ Fork is up to date with upstream"
+          else
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Fork needs to sync $BEHIND commits from upstream"
+          fi
+
+      - name: 'Attempt merge'
+        id: 'merge'
+        if: 'steps.check_updates.outputs.has_updates == ''true'''
+        continue-on-error: true
+        run: |
+          # Try to merge upstream changes
+          if git merge upstream/main --no-edit; then
+            echo "merge_status=success" >> $GITHUB_OUTPUT
+            echo "✅ Successfully merged upstream changes"
+          else
+            echo "merge_status=conflict" >> $GITHUB_OUTPUT
+            echo "❌ Merge conflicts detected"
+            git merge --abort
+            exit 1
+          fi
+
+      - name: 'Setup Node.js'
+        if: 'steps.merge.outputs.merge_status == ''success'''
+        uses: 'actions/setup-node@v4'
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 'Install dependencies'
+        if: 'steps.merge.outputs.merge_status == ''success'''
+        run: 'npm ci'
+
+      - name: 'Run preflight checks'
+        id: 'preflight'
+        if: 'steps.merge.outputs.merge_status == ''success'''
+        continue-on-error: true
+        run: |
+          if npm run preflight; then
+            echo "preflight_status=success" >> $GITHUB_OUTPUT
+            echo "✅ All preflight checks passed"
+          else
+            echo "preflight_status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Preflight checks failed"
+            exit 1
+          fi
+
+      - name: 'Push changes'
+        if: |
+          steps.merge.outputs.merge_status == 'success' &&
+          steps.preflight.outputs.preflight_status == 'success' &&
+          github.event.inputs.dry_run != 'true'
+        run: |
+          git push origin main
+          echo "✅ Successfully pushed merged changes to fork"
+
+      - name: 'Create issue on conflict'
+        if: 'steps.merge.outputs.merge_status == ''conflict'''
+        uses: 'actions/github-script@v7'
+        with:
+          script: |
+            const title = '🔄 Upstream Sync Failed - Merge Conflicts Detected';
+            const body = `## Upstream Sync Failed
+
+            The automated upstream sync workflow encountered merge conflicts and cannot proceed automatically.
+
+            ### Manual Resolution Required
+
+            Please follow these steps to resolve the conflicts:
+
+            1. **Fetch upstream changes:**
+               \`\`\`bash
+               git remote add upstream https://github.com/google-gemini/gemini-cli.git
+               git fetch upstream
+               \`\`\`
+
+            2. **Merge and resolve conflicts:**
+               \`\`\`bash
+               git checkout main
+               git merge upstream/main
+               # Resolve conflicts in your editor
+               \`\`\`
+
+            3. **Test the merge:**
+               \`\`\`bash
+               npm run preflight
+               \`\`\`
+
+            4. **Push the changes:**
+               \`\`\`bash
+               git push origin main
+               \`\`\`
+
+            ### Additional Information
+
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Triggered:** ${{ github.event_name }}
+            - **Date:** ${new Date().toISOString()}
+
+            See [FORK_NOTES.md](https://github.com/${{ github.repository }}/blob/main/FORK_NOTES.md#handling-merge-conflicts) for detailed conflict resolution guidelines.
+
+            ---
+            *This issue was automatically created by the [sync-upstream workflow](https://github.com/${{ github.repository }}/blob/main/.github/workflows/sync-upstream.yml).*`;
+
+            // Check if an issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'upstream-sync'
+            });
+
+            const existingIssue = issues.data.find(issue => issue.title === title);
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['upstream-sync', 'maintenance', 'help wanted']
+              });
+              console.log('Created new issue for merge conflict');
+            } else {
+              console.log('Issue already exists, skipping creation');
+            }
+
+      - name: 'Create issue on preflight failure'
+        if: 'steps.preflight.outputs.preflight_status == ''failed'''
+        uses: 'actions/github-script@v7'
+        with:
+          script: |
+            const title = '🔄 Upstream Sync - Preflight Checks Failed';
+            const body = `## Upstream Sync Completed with Test Failures
+
+            The automated upstream sync successfully merged changes from upstream, but the preflight checks (build, lint, tests) failed.
+
+            ### Action Required
+
+            The merge occurred in the workflow but was **not pushed** to the fork. You need to redo the merge locally and fix the issues:
+
+            1. **Fetch and merge upstream changes locally:**
+               \`\`\`bash
+               git remote add upstream https://github.com/google-gemini/gemini-cli.git || true
+               git fetch upstream
+               git checkout main
+               git merge upstream/main
+               \`\`\`
+
+            2. **Run preflight checks locally:**
+               \`\`\`bash
+               npm run preflight
+               \`\`\`
+
+            3. **Fix any failing tests or build issues**
+
+            4. **Push the fixes:**
+               \`\`\`bash
+               git push origin main
+               \`\`\`
+
+            ### Workflow Information
+
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Date:** ${new Date().toISOString()}
+
+            Check the workflow logs for detailed error messages.
+
+            ---
+            *This issue was automatically created by the [sync-upstream workflow](https://github.com/${{ github.repository }}/blob/main/.github/workflows/sync-upstream.yml).*`;
+
+            // Check if an issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'upstream-sync'
+            });
+
+            const existingIssue = issues.data.find(issue => issue.title === title);
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['upstream-sync', 'bug', 'tests']
+              });
+              console.log('Created new issue for preflight failure');
+            } else {
+              console.log('Issue already exists, skipping creation');
+            }
+
+      - name: 'Summary'
+        if: 'always()'
+        run: |
+          echo "## Upstream Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Has Updates:** ${{ steps.check_updates.outputs.has_updates }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commits Behind:** ${{ steps.check_updates.outputs.commits_behind }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Merge Status:** ${{ steps.merge.outputs.merge_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Preflight Status:** ${{ steps.preflight.outputs.preflight_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run:** ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
