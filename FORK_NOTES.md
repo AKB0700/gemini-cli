@@ -126,6 +126,7 @@ If you develop a feature in this fork that would benefit the upstream project:
 
 - [ ] Regularly sync with upstream (recommended: weekly or bi-weekly)
 - [ ] Keep dependencies up to date
+- [ ] Check for security vulnerabilities weekly (automated via GitHub Actions)
 - [ ] Monitor upstream releases for breaking changes
 - [ ] Update fork-specific documentation when changes are made
 - [ ] Review and test upstream changes before merging
