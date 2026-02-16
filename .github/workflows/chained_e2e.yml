@@ -163,7 +163,22 @@ jobs:
         if: "${{matrix.sandbox == 'sandbox:docker'}}"
         uses: 'docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435' # ratchet:docker/setup-buildx-action@v3
 
+      - name: 'Check GEMINI_API_KEY availability'
+        id: 'check_api_key'
+        shell: 'bash'
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "api_key_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️  GEMINI_API_KEY is not set. E2E tests will be skipped."
+            echo "ℹ️  To run E2E tests in your fork, add GEMINI_API_KEY to your repository secrets."
+            echo "ℹ️  See: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+          else
+            echo "api_key_available=true" >> $GITHUB_OUTPUT
+            echo "✓ GEMINI_API_KEY is configured"
+          fi
+
       - name: 'Run E2E tests'
+        if: steps.check_api_key.outputs.api_key_available == 'true'
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           KEEP_OUTPUT: 'true'
@@ -207,8 +222,23 @@ jobs:
         if: "${{runner.os == 'macOS'}}"
         run: |
           npm cache clean --force
+
+      - name: 'Check GEMINI_API_KEY availability'
+        id: 'check_api_key'
+        shell: 'bash'
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "api_key_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️  GEMINI_API_KEY is not set. E2E tests will be skipped."
+            echo "ℹ️  To run E2E tests in your fork, add GEMINI_API_KEY to your repository secrets."
+            echo "ℹ️  See: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+          else
+            echo "api_key_available=true" >> $GITHUB_OUTPUT
+            echo "✓ GEMINI_API_KEY is configured"
+          fi
+
       - name: 'Run E2E tests (non-Windows)'
-        if: "${{runner.os != 'Windows'}}"
+        if: "${{runner.os != 'Windows' && steps.check_api_key.outputs.api_key_available == 'true'}}"
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           KEEP_OUTPUT: 'true'
@@ -265,7 +295,22 @@ jobs:
         run: 'npm run build'
         shell: 'pwsh'
 
+      - name: 'Check GEMINI_API_KEY availability'
+        id: 'check_api_key'
+        shell: 'pwsh'
+        run: |
+          if ([string]::IsNullOrEmpty("${{ secrets.GEMINI_API_KEY }}")) {
+            echo "api_key_available=false" >> $env:GITHUB_OUTPUT
+            Write-Host "⚠️  GEMINI_API_KEY is not set. E2E tests will be skipped."
+            Write-Host "ℹ️  To run E2E tests in your fork, add GEMINI_API_KEY to your repository secrets."
+            Write-Host "ℹ️  See: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+          } else {
+            echo "api_key_available=true" >> $env:GITHUB_OUTPUT
+            Write-Host "✓ GEMINI_API_KEY is configured"
+          }
+
       - name: 'Run E2E tests'
+        if: steps.check_api_key.outputs.api_key_available == 'true'
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           KEEP_OUTPUT: 'true'
@@ -303,7 +348,22 @@ jobs:
       - name: 'Build project'
         run: 'npm run build'
 
+      - name: 'Check GEMINI_API_KEY availability'
+        id: 'check_api_key'
+        shell: 'bash'
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "api_key_available=false" >> $GITHUB_OUTPUT
+            echo "⚠️  GEMINI_API_KEY is not set. Evals will be skipped."
+            echo "ℹ️  To run Evals in your fork, add GEMINI_API_KEY to your repository secrets."
+            echo "ℹ️  See: https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions"
+          else
+            echo "api_key_available=true" >> $GITHUB_OUTPUT
+            echo "✓ GEMINI_API_KEY is configured"
+          fi
+
       - name: 'Run Evals (Required to pass)'
+        if: steps.check_api_key.outputs.api_key_available == 'true'
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
         run: 'npm run test:always_passing_evals'
@@ -321,13 +381,21 @@ jobs:
     steps:
       - name: 'Check E2E test results'
         run: |
-          if [[ ${{ needs.e2e_linux.result }} != 'success' || \
-               ${{ needs.e2e_mac.result }} != 'success' || \
-               ${{ needs.evals.result }} != 'success' ]]; then
-            echo "One or more E2E jobs failed."
+          # Check if jobs failed (as opposed to being skipped or successful)
+          # A job is considered successful if it's either 'success' or 'skipped'
+          linux_ok=${{ needs.e2e_linux.result == 'success' || needs.e2e_linux.result == 'skipped' }}
+          mac_ok=${{ needs.e2e_mac.result == 'success' || needs.e2e_mac.result == 'skipped' }}
+          evals_ok=${{ needs.evals.result == 'success' || needs.evals.result == 'skipped' }}
+
+          echo "E2E Linux result: ${{ needs.e2e_linux.result }} (ok: $linux_ok)"
+          echo "E2E Mac result: ${{ needs.e2e_mac.result }} (ok: $mac_ok)"
+          echo "Evals result: ${{ needs.evals.result }} (ok: $evals_ok)"
+
+          if [[ $linux_ok != "true" || $mac_ok != "true" || $evals_ok != "true" ]]; then
+            echo "❌ One or more E2E jobs failed."
             exit 1
           fi
-          echo "All required E2E jobs passed!"
+          echo "✓ All E2E jobs passed or were skipped!"
 
   set_workflow_status:
     runs-on: 'gemini-cli-ubuntu-16-core'
