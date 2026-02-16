@@ -21,7 +21,8 @@ upstream improvements.
 
 ### Automated Sync (Recommended)
 
-This fork uses a **GitHub Actions workflow** to automatically sync with upstream:
+This fork uses a **GitHub Actions workflow** to automatically sync with
+upstream:
 
 - **Schedule:** Runs weekly on Mondays at 2:00 UTC
 - **Workflow:** `.github/workflows/sync-upstream.yml`
@@ -37,6 +38,14 @@ This fork uses a **GitHub Actions workflow** to automatically sync with upstream
 1. Go to **Actions** → **Sync with Upstream**
 2. Click **Run workflow**
 3. Choose dry-run mode (optional) to test without pushing
+
+**Monitoring:** Check the Actions tab regularly for sync status. The workflow
+will:
+
+- Create an issue labeled `upstream-sync` if merge conflicts occur
+- Create an issue labeled `upstream-sync`, `bug`, `tests` if tests fail after
+  merge
+- Show a summary in the workflow run output
 
 ### Manual Sync (When Needed)
 
