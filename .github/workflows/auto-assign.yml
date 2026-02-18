@@ -1,0 +1,104 @@
+name: 'Auto Assign'
+
+on:
+  pull_request_target:
+    types: ['opened', 'ready_for_review']
+
+permissions:
+  contents: 'read'
+  pull-requests: 'write'
+
+jobs:
+  auto_assign_reviewers:
+    name: 'Auto Assign Reviewers'
+    runs-on: 'ubuntu-latest'
+    if: 'github.event.pull_request.draft == false'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+
+      - name: 'Auto-assign reviewers based on file paths'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Skip if PR is from a fork (external contributors)
+            if (pr.head.repo.full_name !== pr.base.repo.full_name) {
+              console.log('Skipping auto-assign for fork PR');
+              return;
+            }
+
+            // Get the files changed in this PR
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const reviewers = new Set();
+            const teamReviewers = new Set();
+
+            // Define code owners mapping (simplified)
+            const codeOwners = {
+              'docs/': [],
+              'packages/cli/': [],
+              'packages/core/': [],
+              '.github/workflows/': [],
+            };
+
+            // Check files and assign reviewers based on paths
+            for (const file of files) {
+              const filePath = file.filename;
+
+              // Add logic here to assign reviewers based on file paths
+              // This is a simplified version - in production, you'd read from CODEOWNERS
+              if (filePath.startsWith('docs/')) {
+                teamReviewers.add('gemini-cli-docs');
+              }
+              if (filePath.startsWith('.github/workflows/')) {
+                teamReviewers.add('gemini-cli-askmode-approvers');
+              }
+            }
+
+            // Request reviews from individuals and teams
+            const reviewRequest = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              reviewers: Array.from(reviewers),
+              team_reviewers: Array.from(teamReviewers)
+            };
+
+            // Only request reviews if we have reviewers to assign
+            if (reviewRequest.reviewers.length > 0 || reviewRequest.team_reviewers.length > 0) {
+              try {
+                await github.rest.pulls.requestReviewers(reviewRequest);
+                console.log('Reviewers assigned:', reviewRequest);
+              } catch (error) {
+                // Teams might not exist in fork, that's okay
+                console.log('Note: Could not assign all reviewers (teams may not exist):', error.message);
+              }
+            }
+
+  auto_assign_author:
+    name: 'Auto Assign Author'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Assign PR author'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Assign the PR author to their own PR
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                assignees: [pr.user.login]
+              });
+            } catch (error) {
+              console.log('Could not assign author:', error.message);
+            }

@@ -1,0 +1,89 @@
+name: 'Auto Label'
+
+on:
+  pull_request_target:
+    types: ['opened', 'synchronize', 'reopened']
+  issues:
+    types: ['opened', 'reopened']
+
+permissions:
+  contents: 'read'
+  issues: 'write'
+  pull-requests: 'write'
+
+jobs:
+  label_pr:
+    name: 'Label Pull Requests'
+    runs-on: 'ubuntu-latest'
+    if: 'github.event_name == ''pull_request_target'''
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+
+      - name: 'Label PR'
+        uses: 'actions/labeler@07d6bb999ed5b91e999376a456eb3d0a935a3197' # ratchet:actions/labeler@v5
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+          configuration-path: '.github/labeler.yml'
+          sync-labels: true
+
+  label_size:
+    name: 'Label PR Size'
+    runs-on: 'ubuntu-latest'
+    if: 'github.event_name == ''pull_request_target'''
+    steps:
+      - name: 'Label by size'
+        uses: 'codelytv/pr-size-labeler@f0e69a3b0c6e89cc9fbe87a6c3dec6fceb9d9e36' # ratchet:codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          xs_label: 'size/xs'
+          xs_max_size: '10'
+          s_label: 'size/s'
+          s_max_size: '100'
+          m_label: 'size/m'
+          m_max_size: '500'
+          l_label: 'size/l'
+          l_max_size: '1000'
+          xl_label: 'size/xl'
+          fail_if_xl: 'false'
+
+  label_issue_type:
+    name: 'Label Issue Type'
+    runs-on: 'ubuntu-latest'
+    if: 'github.event_name == ''issues'''
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+
+      - name: 'Auto-label issue'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const title = issue.title || '';
+            const labels = [];
+
+            // Auto-detect issue type from title or body
+            if (title.match(/\b(bug|fix|error|crash|broken)\b/i) || body.match(/\b(bug|error|crash)\b/i)) {
+              labels.push('type: bug');
+            }
+            if (title.match(/\b(feature|enhancement|improve)\b/i) || body.match(/\b(feature|enhancement)\b/i)) {
+              labels.push('type: feature');
+            }
+            if (title.match(/\b(docs|documentation)\b/i) || body.match(/\b(documentation|docs)\b/i)) {
+              labels.push('type: documentation');
+            }
+            if (title.match(/\b(question|help|how)\b/i) || body.match(/\b(question|help)\b/i)) {
+              labels.push('type: question');
+            }
+
+            // Apply labels if any were detected
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }

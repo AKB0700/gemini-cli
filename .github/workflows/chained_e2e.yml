@@ -30,18 +30,19 @@ jobs:
   merge_queue_skipper:
     name: 'Merge Queue Skipper'
     permissions: 'read-all'
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     outputs:
       skip: '${{ steps.merge-queue-e2e-skipper.outputs.skip-check }}'
     steps:
       - id: 'merge-queue-e2e-skipper'
         uses: 'cariad-tech/merge-queue-ci-skipper@1032489e59437862c90a08a2c92809c903883772' # ratchet:cariad-tech/merge-queue-ci-skipper@main
+        if: '${{ secrets.GEMINI_CLI_ROBOT_GITHUB_PAT != null }}'
         with:
           secret: '${{ secrets.GEMINI_CLI_ROBOT_GITHUB_PAT }}'
     continue-on-error: true
 
   download_repo_name:
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     if: "${{github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'}}"
     outputs:
       repo_name: '${{ steps.output-repo-name.outputs.repo_name }}'
@@ -89,7 +90,7 @@ jobs:
 
   parse_run_context:
     name: 'Parse run context'
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     needs: 'download_repo_name'
     if: 'always()'
     outputs:
@@ -107,7 +108,7 @@ jobs:
           echo "SHA=$SHA" >> "$GITHUB_OUTPUT"
 
   set_pending_status:
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     permissions: 'write-all'
     needs:
       - 'parse_run_context'
@@ -115,7 +116,7 @@ jobs:
     steps:
       - name: 'Set pending status'
         uses: 'myrotvorets/set-commit-status-action@16037e056d73b2d3c88e37e393ff369047f70886' # ratchet:myrotvorets/set-commit-status-action@master
-        if: 'always()'
+        if: "${{ always() && secrets.GEMINI_CLI_ROBOT_GITHUB_PAT != '' }}"
         with:
           allowForks: 'true'
           repo: '${{ github.repository }}'
@@ -129,7 +130,7 @@ jobs:
     needs:
       - 'merge_queue_skipper'
       - 'parse_run_context'
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     if: |
       always() && (needs.merge_queue_skipper.result !='success' || needs.merge_queue_skipper.outputs.skip != 'true')
     strategy:
@@ -223,7 +224,7 @@ jobs:
       - 'parse_run_context'
     if: |
       always() && (needs.merge_queue_skipper.result !='success' || needs.merge_queue_skipper.outputs.skip != 'true')
-    runs-on: 'gemini-cli-windows-16-core'
+    runs-on: 'windows-latest'
     continue-on-error: true
 
     steps:
@@ -282,7 +283,7 @@ jobs:
     needs:
       - 'merge_queue_skipper'
       - 'parse_run_context'
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     if: |
       always() && (needs.merge_queue_skipper.result !='success' || needs.merge_queue_skipper.outputs.skip != 'true')
     steps:
@@ -317,7 +318,7 @@ jobs:
       - 'e2e_mac'
       - 'evals'
       - 'merge_queue_skipper'
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check E2E test results'
         run: |
@@ -330,7 +331,7 @@ jobs:
           echo "All required E2E jobs passed!"
 
   set_workflow_status:
-    runs-on: 'gemini-cli-ubuntu-16-core'
+    runs-on: 'ubuntu-latest'
     permissions: 'write-all'
     if: 'always()'
     needs:
