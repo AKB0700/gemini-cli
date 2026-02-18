@@ -1,0 +1,176 @@
+name: 'Automated Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        type: 'choice'
+        options:
+          - 'patch'
+          - 'minor'
+          - 'major'
+        default: 'patch'
+      dry_run:
+        description: 'Dry run (no actual release)'
+        required: false
+        type: 'boolean'
+        default: false
+
+permissions:
+  contents: 'write'
+  pull-requests: 'write'
+  packages: 'write'
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  validate:
+    name: 'Validate Release Prerequisites'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 'Set up Node.js'
+        uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: 'Install dependencies'
+        run: 'npm ci'
+
+      - name: 'Run tests'
+        run: 'npm test'
+
+      - name: 'Build project'
+        run: 'npm run build'
+
+      - name: 'Validate bundle'
+        run: |
+          npm run bundle
+          node ./bundle/gemini.js --version
+
+  create_release:
+    name: 'Create Release'
+    needs: 'validate'
+    runs-on: 'ubuntu-latest'
+    outputs:
+      version: '${{ steps.version.outputs.version }}'
+      tag: '${{ steps.version.outputs.tag }}'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: 'Set up Node.js'
+        uses: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' # ratchet:actions/setup-node@v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 'Configure Git'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 'Install dependencies'
+        run: 'npm ci'
+
+      - name: 'Bump version'
+        id: 'version'
+        run: |
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          
+          # Use npm version to bump
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version)
+            echo "Dry run - would create version: $NEW_VERSION"
+            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            NEW_VERSION=$(npm version $RELEASE_TYPE -m "chore: release %s")
+            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+            echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 'Build for release'
+        run: |
+          npm run build
+          npm run bundle
+
+      - name: 'Generate changelog'
+        id: 'changelog'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 50
+            });
+            
+            const changelog = commits
+              .map(commit => `- ${commit.commit.message.split('\n')[0]} (${commit.sha.substring(0, 7)})`)
+              .join('\n');
+            
+            core.setOutput('changelog', changelog);
+            return changelog;
+
+      - name: 'Push changes'
+        if: '${{ github.event.inputs.dry_run != ''true'' }}'
+        run: |
+          git push --follow-tags
+
+      - name: 'Create GitHub Release'
+        if: '${{ github.event.inputs.dry_run != ''true'' }}'
+        uses: 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' # ratchet:actions/github-script@v8
+        with:
+          script: |
+            const tag = '${{ steps.version.outputs.tag }}';
+            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+            
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              body: `## Changes\n\n${changelog}`,
+              draft: false,
+              prerelease: false
+            });
+
+      - name: 'Publish to npm'
+        if: '${{ github.event.inputs.dry_run != ''true'' && secrets.NPM_TOKEN != '''' }}'
+        env:
+          NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}'
+        run: |
+          # Only publish if NPM_TOKEN is available
+          if [[ -n "$NODE_AUTH_TOKEN" ]]; then
+            npm publish --access public
+          else
+            echo "NPM_TOKEN not available, skipping npm publish"
+          fi
+
+      - name: 'Summary'
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            echo "⚠️ This was a dry run - no actual release was created" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ Release created successfully" >> $GITHUB_STEP_SUMMARY
+          fi
