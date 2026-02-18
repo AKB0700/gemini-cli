@@ -90,7 +90,7 @@ jobs:
         id: 'version'
         run: |
           RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-          
+
           # Use npm version to bump
           if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
             NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version)
@@ -118,11 +118,11 @@ jobs:
               repo: context.repo.repo,
               per_page: 50
             });
-            
+
             const changelog = commits
               .map(commit => `- ${commit.commit.message.split('\n')[0]} (${commit.sha.substring(0, 7)})`)
               .join('\n');
-            
+
             core.setOutput('changelog', changelog);
             return changelog;
 
@@ -138,7 +138,7 @@ jobs:
           script: |
             const tag = '${{ steps.version.outputs.tag }}';
             const changelog = `${{ steps.changelog.outputs.changelog }}`;
-            
+
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,

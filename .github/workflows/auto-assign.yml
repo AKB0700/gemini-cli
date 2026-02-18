@@ -22,7 +22,7 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
-            
+
             // Skip if PR is from a fork (external contributors)
             if (pr.head.repo.full_name !== pr.base.repo.full_name) {
               console.log('Skipping auto-assign for fork PR');
@@ -50,7 +50,7 @@ jobs:
             // Check files and assign reviewers based on paths
             for (const file of files) {
               const filePath = file.filename;
-              
+
               // Add logic here to assign reviewers based on file paths
               // This is a simplified version - in production, you'd read from CODEOWNERS
               if (filePath.startsWith('docs/')) {
@@ -90,7 +90,7 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
-            
+
             // Assign the PR author to their own PR
             try {
               await github.rest.issues.addAssignees({
