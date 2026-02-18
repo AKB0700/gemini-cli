@@ -89,6 +89,9 @@ jobs:
       - name: 'Install linters'
         run: 'node scripts/lint.js --setup'
 
+      - name: 'Build project'
+        run: 'npm run build'
+
       - name: 'Run ESLint'
         run: 'node scripts/lint.js --eslint'
 
