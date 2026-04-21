@@ -1,0 +1,62 @@
+name: NodeJS with Gulp
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Build
+      run: |
+        npm install
+        gulp
+The job failed because Gulp is not installed locally in your repository. The error message states:
+
+> [19:38:13] Local gulp not found in ~/work/gemini-cli/gemini-cli  
+> [19:38:13] Try running: npm install gulp
+
+**Solution:**
+Add `gulp` as a development dependency in your project before running any Gulp tasks.
+
+### How to Fix
+
+1. In your repository directory, run:
+   ```sh
+   npm install --save-dev gulp
+   ```
+
+2. Make sure your `package.json` lists gulp in `devDependencies`:
+   ```json
+   "devDependencies": {
+     "gulp": "^<latest-version>"
+   }
+   ```
+
+3. If you use a workflow file for GitHub Actions (your workflow is at [.github/workflows/npm-gulp.yml](https://github.com/AKB0700/gemini-cli/blob/8942f196e773d42943abbbacd9931c0e2f1bc05d/.github/workflows/npm-gulp.yml)), ensure there is a step to install dependencies before running Gulp commands:
+   ```yaml
+   - name: Install dependencies
+     run: npm install
+   ```
+
+   This should appear before any Gulp-related steps.
+
+---
+
+**Summary:**  
+Install Gulp using `npm install --save-dev gulp`, verify it's in your `package.json`, and ensure your workflow runs `npm install` first. This will resolve the job failure and allow your Gulp build task to execute successfully.
